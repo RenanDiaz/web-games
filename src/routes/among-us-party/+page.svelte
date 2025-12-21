@@ -423,7 +423,7 @@
 						placeholder={$_('amongUs.pinSetup.enterPin')}
 						maxlength="4"
 						inputmode="numeric"
-						autocomplete="off"
+						autocomplete="one-time-code"
 					/>
 					<input
 						type="password"
@@ -431,7 +431,7 @@
 						placeholder={$_('amongUs.pinSetup.confirmPin')}
 						maxlength="4"
 						inputmode="numeric"
-						autocomplete="off"
+						autocomplete="one-time-code"
 						onkeypress={handlePinSetupKeypress}
 					/>
 					<div class="button-row">
@@ -447,7 +447,7 @@
 						placeholder={$_('amongUs.pinEntry.placeholder')}
 						maxlength="4"
 						inputmode="numeric"
-						autocomplete="off"
+						autocomplete="one-time-code"
 						onkeypress={handlePinKeypress}
 					/>
 					<div class="button-row">
