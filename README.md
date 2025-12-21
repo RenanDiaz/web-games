@@ -1,6 +1,6 @@
 # Web Games Collection
 
-A collection of browser-based games. No installation required - just open in any modern browser!
+A collection of browser-based games built with SvelteKit.
 
 ## Games
 
@@ -20,16 +20,33 @@ A real-life party game inspired by Among Us. Use this app to secretly assign rol
 - Player statistics (times as impostor/crewmate, win rates)
 - Game state saved in browser (survives page refresh)
 
-## Running Locally
-
-Simply open `index.html` in your browser, or use a local server:
+## Development
 
 ```bash
-# Using Python
-python -m http.server 8000
+# Install dependencies
+npm install
 
-# Using Node.js
-npx serve
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
 ```
 
-Then navigate to `http://localhost:8000`
+## Deployment
+
+This project uses SvelteKit with the static adapter, making it easy to deploy to any static hosting:
+
+- **Vercel**: Connect your repo and it will auto-detect SvelteKit
+- **Netlify**: Same as Vercel, auto-detection works
+- **GitHub Pages**: Run `npm run build` and deploy the `build` folder
+
+## Tech Stack
+
+- [SvelteKit](https://kit.svelte.dev/) - Full-stack framework
+- [Svelte 5](https://svelte.dev/) - UI framework with runes
+- TypeScript - Type safety
+- Static adapter - Pre-rendered for fast loading
