@@ -1,31 +1,32 @@
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
+
 	const games = [
 		{
 			slug: 'among-us-party',
 			icon: '🎭',
-			title: 'Among Us Party',
-			description:
-				'Play Among Us in real life! This app assigns Impostor and Crewmate roles secretly to each player using a PIN system. Track scores across multiple rounds.',
-			tag: 'Party Game'
+			titleKey: 'home.games.amongUs.title',
+			descriptionKey: 'home.games.amongUs.description',
+			tagKey: 'home.games.amongUs.tag'
 		}
 	];
 </script>
 
 <svelte:head>
-	<title>Web Games Collection</title>
+	<title>{$_('home.title')}</title>
 </svelte:head>
 
 <div class="home">
-	<h1>🎮 Web Games</h1>
-	<p class="subtitle">A collection of fun browser games</p>
+	<h1>🎮 {$_('home.heading')}</h1>
+	<p class="subtitle">{$_('home.subtitle')}</p>
 
 	<div class="games-grid">
 		{#each games as game}
 			<a href="/{game.slug}" class="game-card">
 				<div class="game-icon">{game.icon}</div>
-				<div class="game-title">{game.title}</div>
-				<div class="game-description">{game.description}</div>
-				<span class="game-tag">{game.tag}</span>
+				<div class="game-title">{$_(game.titleKey)}</div>
+				<div class="game-description">{$_(game.descriptionKey)}</div>
+				<span class="game-tag">{$_(game.tagKey)}</span>
 			</a>
 		{/each}
 	</div>

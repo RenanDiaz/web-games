@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
+	import { _ } from 'svelte-i18n';
 
 	// Types
 	type Screen = 'setup' | 'roleCheck' | 'roundEnd' | 'scoreboard';
@@ -116,7 +117,7 @@
 		if (!name) return;
 
 		if (gameState.players.includes(name)) {
-			alert('This player is already added!');
+			alert($_('amongUs.setup.playerExistsAlert'));
 			return;
 		}
 
@@ -155,12 +156,12 @@
 	// Game Start
 	function startGame() {
 		if (gameState.players.length < 3) {
-			alert('You need at least 3 players to start');
+			alert($_('amongUs.setup.notEnoughPlayersAlert'));
 			return;
 		}
 
 		if (impostorCount >= gameState.players.length) {
-			alert('Too many impostors for the number of players');
+			alert($_('amongUs.setup.tooManyImpostorsAlert'));
 			return;
 		}
 
@@ -213,12 +214,12 @@
 
 	function setupPin() {
 		if (!checkPin || checkPin.length !== 4 || !/^\d+$/.test(checkPin)) {
-			alert('Please enter a 4-digit PIN');
+			alert($_('amongUs.pinSetup.invalidPinAlert'));
 			return;
 		}
 
 		if (checkPin !== confirmPin) {
-			alert('PINs do not match! Try again.');
+			alert($_('amongUs.pinSetup.pinMismatchAlert'));
 			checkPin = '';
 			confirmPin = '';
 			return;
@@ -240,7 +241,7 @@
 		if (!selectedPlayer) return;
 
 		if (checkPin !== gameState.playerPins[selectedPlayer]) {
-			alert('Wrong PIN! Try again.');
+			alert($_('amongUs.pinEntry.wrongPinAlert'));
 			checkPin = '';
 			return;
 		}
@@ -306,7 +307,7 @@
 	}
 
 	function resetGame() {
-		if (!confirm('Are you sure you want to reset the entire game? All scores will be lost.')) {
+		if (!confirm($_('amongUs.scoreboard.resetConfirm'))) {
 			return;
 		}
 
@@ -341,30 +342,30 @@
 </script>
 
 <svelte:head>
-	<title>Among Us Party | Web Games</title>
+	<title>{$_('amongUs.title')}</title>
 </svelte:head>
 
 <div class="container">
 	<!-- Setup Screen -->
 	{#if currentScreen === 'setup'}
 		<div class="screen fade-in">
-			<h1>🎭 Among Us Party</h1>
-			<p class="subtitle">Real-life role assignment game</p>
+			<h1>🎭 {$_('amongUs.heading')}</h1>
+			<p class="subtitle">{$_('amongUs.subtitle')}</p>
 
 			<div class="card">
-				<h2>Game Setup</h2>
+				<h2>{$_('amongUs.setup.heading')}</h2>
 
 				<div class="form-group">
-					<label for="impostor-count">Number of Impostors</label>
+					<label for="impostor-count">{$_('amongUs.setup.impostorCount')}</label>
 					<select id="impostor-count" bind:value={impostorCount}>
-						<option value={1}>1 Impostor</option>
-						<option value={2}>2 Impostors</option>
-						<option value={3}>3 Impostors</option>
+						<option value={1}>{$_('amongUs.setup.impostorOption', { values: { count: 1 } })}</option>
+						<option value={2}>{$_('amongUs.setup.impostorOption', { values: { count: 2 } })}</option>
+						<option value={3}>{$_('amongUs.setup.impostorOption', { values: { count: 3 } })}</option>
 					</select>
 				</div>
 
 				<div class="form-group">
-					<label>Players</label>
+					<label>{$_('amongUs.setup.players')}</label>
 					<div class="player-list">
 						{#each gameState.players as player}
 							<span class="player-tag">
@@ -377,14 +378,14 @@
 						<input
 							type="text"
 							bind:value={newPlayerName}
-							placeholder="Enter player name"
+							placeholder={$_('amongUs.setup.playerPlaceholder')}
 							onkeypress={handlePlayerKeypress}
 						/>
-						<button class="btn-secondary" onclick={addPlayer}>Add</button>
+						<button class="btn-secondary" onclick={addPlayer}>{$_('amongUs.setup.addButton')}</button>
 					</div>
 				</div>
 
-				<button class="btn-primary btn-large" onclick={startGame}>Start Game</button>
+				<button class="btn-primary btn-large" onclick={startGame}>{$_('amongUs.setup.startButton')}</button>
 			</div>
 		</div>
 	{/if}
@@ -392,12 +393,12 @@
 	<!-- Role Check Screen -->
 	{#if currentScreen === 'roleCheck'}
 		<div class="screen fade-in">
-			<h1>🔍 Check Your Role</h1>
-			<p class="subtitle">Round {gameState.currentRound}</p>
+			<h1>🔍 {$_('amongUs.roleCheck.heading')}</h1>
+			<p class="subtitle">{$_('amongUs.roleCheck.round', { values: { round: gameState.currentRound } })}</p>
 
 			<div class="card">
 				{#if roleCheckStep === 'selection'}
-					<h2>Select Your Name</h2>
+					<h2>{$_('amongUs.roleCheck.selectName')}</h2>
 					<div class="player-buttons">
 						{#each gameState.players as player}
 							{@const isChecked = gameState.checkedPlayers.includes(player)}
@@ -412,68 +413,72 @@
 						{/each}
 					</div>
 				{:else if roleCheckStep === 'pinSetup'}
-					<h2>Create Your PIN</h2>
+					<h2>{$_('amongUs.pinSetup.heading')}</h2>
 					<p class="player-name-display">{selectedPlayer}</p>
-					<p class="pin-setup-hint">Set a 4-digit PIN that only you will know</p>
+					<p class="pin-setup-hint">{$_('amongUs.pinSetup.hint')}</p>
 					<input
 						type="password"
 						bind:value={checkPin}
-						placeholder="Enter a 4-digit PIN"
+						placeholder={$_('amongUs.pinSetup.enterPin')}
 						maxlength="4"
 						inputmode="numeric"
 					/>
 					<input
 						type="password"
 						bind:value={confirmPin}
-						placeholder="Confirm your PIN"
+						placeholder={$_('amongUs.pinSetup.confirmPin')}
 						maxlength="4"
 						inputmode="numeric"
 						onkeypress={handlePinSetupKeypress}
 					/>
 					<div class="button-row">
-						<button class="btn-secondary" onclick={cancelPinEntry}>Back</button>
-						<button class="btn-primary" onclick={setupPin}>Set PIN & Reveal Role</button>
+						<button class="btn-secondary" onclick={cancelPinEntry}>{$_('common.back')}</button>
+						<button class="btn-primary" onclick={setupPin}>{$_('amongUs.pinSetup.submitButton')}</button>
 					</div>
 				{:else if roleCheckStep === 'pin'}
-					<h2>Enter Your PIN</h2>
+					<h2>{$_('amongUs.pinEntry.heading')}</h2>
 					<p class="player-name-display">{selectedPlayer}</p>
 					<input
 						type="password"
 						bind:value={checkPin}
-						placeholder="Enter your PIN"
+						placeholder={$_('amongUs.pinEntry.placeholder')}
 						maxlength="4"
 						inputmode="numeric"
 						onkeypress={handlePinKeypress}
 					/>
 					<div class="button-row">
-						<button class="btn-secondary" onclick={cancelPinEntry}>Back</button>
-						<button class="btn-primary" onclick={revealRole}>Reveal Role</button>
+						<button class="btn-secondary" onclick={cancelPinEntry}>{$_('common.back')}</button>
+						<button class="btn-primary" onclick={revealRole}>{$_('amongUs.pinEntry.submitButton')}</button>
 					</div>
 				{:else if roleCheckStep === 'reveal'}
 					<div class="role-display" class:impostor={selectedPlayerRole === 'impostor'} class:crewmate={selectedPlayerRole === 'crewmate'}>
 						{#if selectedPlayerRole === 'impostor'}
 							<span class="role-icon-large">🔪</span>
-							<span class="role-name">Impostor</span>
+							<span class="role-name">{$_('amongUs.role.impostor')}</span>
 							<p class="role-hint">
 								{#if otherImpostors.length > 0}
-									Your fellow impostor{otherImpostors.length > 1 ? 's' : ''}: {otherImpostors.join(', ')}
+									{#if otherImpostors.length === 1}
+										{$_('amongUs.role.fellowImpostors', { values: { names: otherImpostors.join(', ') } })}
+									{:else}
+										{$_('amongUs.role.fellowImpostorsPlural', { values: { names: otherImpostors.join(', ') } })}
+									{/if}
 								{:else}
-									Eliminate the crewmates without getting caught!
+									{$_('amongUs.role.impostorHint')}
 								{/if}
 							</p>
 						{:else}
 							<span class="role-icon-large">👨‍🚀</span>
-							<span class="role-name">Crewmate</span>
-							<p class="role-hint">Complete your tasks and find the impostor!</p>
+							<span class="role-name">{$_('amongUs.role.crewmate')}</span>
+							<p class="role-hint">{$_('amongUs.role.crewmateHint')}</p>
 						{/if}
 					</div>
-					<button class="btn-primary btn-large" onclick={hideRole}>Hide Role</button>
+					<button class="btn-primary btn-large" onclick={hideRole}>{$_('amongUs.role.hideButton')}</button>
 				{/if}
 			</div>
 
 			<div class="action-bar">
-				<button class="btn-secondary" onclick={showRoundEnd}>End Round</button>
-				<span class="checked-count">{gameState.checkedPlayers.length}/{gameState.players.length} players checked</span>
+				<button class="btn-secondary" onclick={showRoundEnd}>{$_('amongUs.roleCheck.endRound')}</button>
+				<span class="checked-count">{$_('amongUs.roleCheck.playersChecked', { values: { checked: gameState.checkedPlayers.length, total: gameState.players.length } })}</span>
 			</div>
 		</div>
 	{/if}
@@ -481,23 +486,23 @@
 	<!-- Round End Screen -->
 	{#if currentScreen === 'roundEnd'}
 		<div class="screen fade-in">
-			<h1>🏁 Round {gameState.currentRound} Complete</h1>
+			<h1>🏁 {$_('amongUs.roundEnd.heading', { values: { round: gameState.currentRound } })}</h1>
 
 			<div class="card">
-				<h2>Who Won?</h2>
+				<h2>{$_('amongUs.roundEnd.whoWon')}</h2>
 				<div class="winner-buttons">
 					<button class="btn-crewmate btn-large" onclick={() => recordWin('crewmates')}>
 						<span class="role-icon">👨‍🚀</span>
-						Crewmates Win
+						{$_('amongUs.roundEnd.crewmatesWin')}
 					</button>
 					<button class="btn-impostor btn-large" onclick={() => recordWin('impostors')}>
 						<span class="role-icon">🔪</span>
-						Impostors Win
+						{$_('amongUs.roundEnd.impostorsWin')}
 					</button>
 				</div>
 
 				<div class="round-info">
-					<h3>This round's impostors were:</h3>
+					<h3>{$_('amongUs.roundEnd.impostorsWere')}</h3>
 					<div class="impostor-names">
 						{#each currentImpostors as impostor}
 							<span class="player-tag impostor-tag">{impostor}</span>
@@ -511,24 +516,24 @@
 	<!-- Scoreboard Screen -->
 	{#if currentScreen === 'scoreboard'}
 		<div class="screen fade-in">
-			<h1>📊 Scoreboard</h1>
+			<h1>📊 {$_('amongUs.scoreboard.heading')}</h1>
 
 			<div class="card">
 				<div class="score-summary">
 					<div class="team-score crewmate-score">
 						<span class="team-icon">👨‍🚀</span>
-						<span class="team-name">Crewmates</span>
+						<span class="team-name">{$_('amongUs.scoreboard.crewmates')}</span>
 						<span class="score">{gameState.scores.crewmateWins}</span>
 					</div>
-					<div class="vs">VS</div>
+					<div class="vs">{$_('amongUs.scoreboard.vs')}</div>
 					<div class="team-score impostor-score">
 						<span class="team-icon">🔪</span>
-						<span class="team-name">Impostors</span>
+						<span class="team-name">{$_('amongUs.scoreboard.impostors')}</span>
 						<span class="score">{gameState.scores.impostorWins}</span>
 					</div>
 				</div>
 
-				<h2>Player Stats</h2>
+				<h2>{$_('amongUs.scoreboard.playerStats')}</h2>
 				<div class="player-stats">
 					{#each gameState.players as player}
 						{@const stats = gameState.playerStats[player]}
@@ -544,18 +549,18 @@
 					{/each}
 				</div>
 
-				<h2>Round History</h2>
+				<h2>{$_('amongUs.scoreboard.roundHistory')}</h2>
 				<div class="round-history">
 					{#if gameState.roundHistory.length === 0}
-						<p class="no-history">No rounds played yet</p>
+						<p class="no-history">{$_('amongUs.scoreboard.noHistory')}</p>
 					{:else}
 						{#each [...gameState.roundHistory].reverse() as round}
 							<div class="round-history-item">
-								<strong>Round {round.round}:</strong>
+								<strong>{$_('amongUs.scoreboard.roundResult', { values: { round: round.round } })}</strong>
 								<span class="round-winner" class:crewmates={round.winner === 'crewmates'} class:impostors={round.winner === 'impostors'}>
-									{round.winner === 'crewmates' ? '👨‍🚀 Crewmates' : '🔪 Impostors'} won
+									{round.winner === 'crewmates' ? '👨‍🚀 ' + $_('amongUs.scoreboard.crewmatesWon') : '🔪 ' + $_('amongUs.scoreboard.impostorsWon')}
 								</span>
-								<br /><small>Impostors: {round.impostors.join(', ')}</small>
+								<br /><small>{$_('amongUs.scoreboard.impostorsLabel', { values: { names: round.impostors.join(', ') } })}</small>
 							</div>
 						{/each}
 					{/if}
@@ -563,10 +568,10 @@
 			</div>
 
 			<div class="button-row">
-				<button class="btn-secondary" onclick={backToGame}>Back to Game</button>
-				<button class="btn-primary btn-large" onclick={startNewRound}>Next Round</button>
+				<button class="btn-secondary" onclick={backToGame}>{$_('amongUs.scoreboard.backToGame')}</button>
+				<button class="btn-primary btn-large" onclick={startNewRound}>{$_('amongUs.scoreboard.nextRound')}</button>
 			</div>
-			<button class="btn-danger" onclick={resetGame}>Reset Entire Game</button>
+			<button class="btn-danger" onclick={resetGame}>{$_('amongUs.scoreboard.resetGame')}</button>
 		</div>
 	{/if}
 </div>

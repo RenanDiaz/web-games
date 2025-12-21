@@ -1,6 +1,9 @@
 <script lang="ts">
 	import '../app.css';
+	import '$lib/i18n';
 	import { page } from '$app/stores';
+	import { _, isLoading } from 'svelte-i18n';
+	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 
 	let { children } = $props();
 
@@ -11,27 +14,43 @@
 	<link rel="icon" href="/favicon.svg" />
 </svelte:head>
 
-<div class="app">
-	{#if !isHome}
-		<nav class="nav">
-			<a href="/" class="nav-home">
-				<span class="nav-icon">🎮</span>
-				<span>Games</span>
-			</a>
+{#if $isLoading}
+	<div class="loading">Loading...</div>
+{:else}
+	<div class="app">
+		<nav class="nav" class:nav-home={isHome}>
+			{#if !isHome}
+				<a href="/" class="nav-link">
+					<span class="nav-icon">🎮</span>
+					<span>{$_('common.games')}</span>
+				</a>
+			{/if}
+			<div class="nav-spacer"></div>
+			<LanguageSwitcher />
 		</nav>
-	{/if}
 
-	<main>
-		{@render children()}
-	</main>
-</div>
+		<main>
+			{@render children()}
+		</main>
+	</div>
+{/if}
 
 <style>
+	.loading {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		min-height: 100vh;
+		color: var(--text-secondary);
+	}
+
 	.app {
 		min-height: 100vh;
 	}
 
 	.nav {
+		display: flex;
+		align-items: center;
 		padding: 12px 20px;
 		background: rgba(22, 33, 62, 0.8);
 		backdrop-filter: blur(10px);
@@ -41,6 +60,10 @@
 	}
 
 	.nav-home {
+		justify-content: flex-end;
+	}
+
+	.nav-link {
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
@@ -51,12 +74,16 @@
 		transition: background 0.2s;
 	}
 
-	.nav-home:hover {
+	.nav-link:hover {
 		background: #1a4a80;
 	}
 
 	.nav-icon {
 		font-size: 1.2rem;
+	}
+
+	.nav-spacer {
+		flex: 1;
 	}
 
 	main {
