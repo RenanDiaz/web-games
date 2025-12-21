@@ -418,20 +418,22 @@
 					<p class="player-name-display">{selectedPlayer}</p>
 					<p class="pin-setup-hint">{$_('amongUs.pinSetup.hint')}</p>
 					<input
-						type="password"
+						type="text"
+						class="pin-input"
 						bind:value={checkPin}
 						placeholder={$_('amongUs.pinSetup.enterPin')}
 						maxlength="4"
 						inputmode="numeric"
-						autocomplete="one-time-code"
+						autocomplete="off"
 					/>
 					<input
-						type="password"
+						type="text"
+						class="pin-input"
 						bind:value={confirmPin}
 						placeholder={$_('amongUs.pinSetup.confirmPin')}
 						maxlength="4"
 						inputmode="numeric"
-						autocomplete="one-time-code"
+						autocomplete="off"
 						onkeypress={handlePinSetupKeypress}
 					/>
 					<div class="button-row">
@@ -442,12 +444,13 @@
 					<h2>{$_('amongUs.pinEntry.heading')}</h2>
 					<p class="player-name-display">{selectedPlayer}</p>
 					<input
-						type="password"
+						type="text"
+						class="pin-input"
 						bind:value={checkPin}
 						placeholder={$_('amongUs.pinEntry.placeholder')}
 						maxlength="4"
 						inputmode="numeric"
-						autocomplete="one-time-code"
+						autocomplete="off"
 						onkeypress={handlePinKeypress}
 					/>
 					<div class="button-row">
@@ -584,6 +587,12 @@
 	/* Screen animations */
 	.screen {
 		animation: fadeIn 0.3s ease;
+	}
+
+	/* PIN input masking */
+	.pin-input {
+		-webkit-text-security: disc;
+		text-security: disc;
 	}
 
 	/* Player list */
