@@ -41,9 +41,13 @@
 	let roleCheckStep: RoleCheckStep = $state('selection');
 	let selectedPlayer: string | null = $state(null);
 	let newPlayerName = $state('');
-	let checkPin = $state('');
-	let confirmPin = $state('');
+	let checkPinDigits: string[] = $state(['', '', '', '']);
+	let confirmPinDigits: string[] = $state(['', '', '', '']);
 	let impostorCount = $state(1);
+
+	// Derived PIN strings from digit arrays
+	const checkPin = $derived(checkPinDigits.join(''));
+	const confirmPin = $derived(confirmPinDigits.join(''));
 
 	let gameState: GameState = $state({
 		playerPins: {},
@@ -145,12 +149,58 @@
 		if (e.key === 'Enter') addPlayer();
 	}
 
-	function handlePinKeypress(e: KeyboardEvent) {
-		if (e.key === 'Enter') revealRole();
+	function handlePinDigitInput(
+		e: Event,
+		index: number,
+		digits: string[],
+		setDigits: (d: string[]) => void,
+		onComplete?: () => void
+	) {
+		const input = e.target as HTMLInputElement;
+		const value = input.value.replace(/\D/g, '').slice(-1); // Only last digit, numbers only
+
+		const newDigits = [...digits];
+		newDigits[index] = value;
+		setDigits(newDigits);
+
+		if (value && index < 3) {
+			// Auto-advance to next input
+			const nextInput = input.parentElement?.querySelector(
+				`input:nth-child(${index + 2})`
+			) as HTMLInputElement;
+			nextInput?.focus();
+		} else if (value && index === 3 && onComplete) {
+			// Last digit entered, trigger completion
+			onComplete();
+		}
 	}
 
-	function handlePinSetupKeypress(e: KeyboardEvent) {
-		if (e.key === 'Enter') setupPin();
+	function handlePinDigitKeydown(
+		e: KeyboardEvent,
+		index: number,
+		digits: string[],
+		setDigits: (d: string[]) => void
+	) {
+		const input = e.target as HTMLInputElement;
+
+		if (e.key === 'Backspace' && !digits[index] && index > 0) {
+			// Move to previous input on backspace if current is empty
+			const prevInput = input.parentElement?.querySelector(
+				`input:nth-child(${index})`
+			) as HTMLInputElement;
+			if (prevInput) {
+				const newDigits = [...digits];
+				newDigits[index - 1] = '';
+				setDigits(newDigits);
+				prevInput.focus();
+			}
+			e.preventDefault();
+		}
+	}
+
+	function resetPinDigits() {
+		checkPinDigits = ['', '', '', ''];
+		confirmPinDigits = ['', '', '', ''];
 	}
 
 	// Game Start
@@ -197,8 +247,7 @@
 	function selectPlayer(name: string) {
 		if (gameState.checkedPlayers.includes(name)) return;
 		selectedPlayer = name;
-		checkPin = '';
-		confirmPin = '';
+		resetPinDigits();
 		// If player doesn't have a PIN yet, prompt them to create one
 		if (!gameState.playerPins[name]) {
 			roleCheckStep = 'pinSetup';
@@ -220,8 +269,7 @@
 
 		if (checkPin !== confirmPin) {
 			alert($_('amongUs.pinSetup.pinMismatchAlert'));
-			checkPin = '';
-			confirmPin = '';
+			resetPinDigits();
 			return;
 		}
 
@@ -242,7 +290,7 @@
 
 		if (checkPin !== gameState.playerPins[selectedPlayer]) {
 			alert($_('amongUs.pinEntry.wrongPinAlert'));
-			checkPin = '';
+			checkPinDigits = ['', '', '', ''];
 			return;
 		}
 
@@ -418,26 +466,36 @@
 					<p class="player-name-display">{selectedPlayer}</p>
 					<p class="pin-setup-hint">{$_('amongUs.pinSetup.hint')}</p>
 					<form autocomplete="off" onsubmit={(e) => { e.preventDefault(); setupPin(); }}>
-						<input
-							type="text"
-							class="pin-input"
-							name="game-pin-{Date.now()}"
-							bind:value={checkPin}
-							placeholder={$_('amongUs.pinSetup.enterPin')}
-							maxlength="4"
-							inputmode="numeric"
-							autocomplete="off"
-						/>
-						<input
-							type="text"
-							class="pin-input"
-							name="game-pin-confirm-{Date.now()}"
-							bind:value={confirmPin}
-							placeholder={$_('amongUs.pinSetup.confirmPin')}
-							maxlength="4"
-							inputmode="numeric"
-							autocomplete="off"
-						/>
+						<label class="pin-label">{$_('amongUs.pinSetup.enterPin')}</label>
+						<div class="pin-digits">
+							{#each [0, 1, 2, 3] as i}
+								<input
+									type="text"
+									class="pin-digit"
+									maxlength="2"
+									inputmode="numeric"
+									autocomplete="off"
+									value={checkPinDigits[i]}
+									oninput={(e) => handlePinDigitInput(e, i, checkPinDigits, (d) => checkPinDigits = d)}
+									onkeydown={(e) => handlePinDigitKeydown(e, i, checkPinDigits, (d) => checkPinDigits = d)}
+								/>
+							{/each}
+						</div>
+						<label class="pin-label">{$_('amongUs.pinSetup.confirmPin')}</label>
+						<div class="pin-digits">
+							{#each [0, 1, 2, 3] as i}
+								<input
+									type="text"
+									class="pin-digit"
+									maxlength="2"
+									inputmode="numeric"
+									autocomplete="off"
+									value={confirmPinDigits[i]}
+									oninput={(e) => handlePinDigitInput(e, i, confirmPinDigits, (d) => confirmPinDigits = d, i === 3 ? setupPin : undefined)}
+									onkeydown={(e) => handlePinDigitKeydown(e, i, confirmPinDigits, (d) => confirmPinDigits = d)}
+								/>
+							{/each}
+						</div>
 						<div class="button-row">
 							<button type="button" class="btn-secondary" onclick={cancelPinEntry}>{$_('common.back')}</button>
 							<button type="submit" class="btn-primary">{$_('amongUs.pinSetup.submitButton')}</button>
@@ -447,16 +505,20 @@
 					<h2>{$_('amongUs.pinEntry.heading')}</h2>
 					<p class="player-name-display">{selectedPlayer}</p>
 					<form autocomplete="off" onsubmit={(e) => { e.preventDefault(); revealRole(); }}>
-						<input
-							type="text"
-							class="pin-input"
-							name="game-pin-entry-{Date.now()}"
-							bind:value={checkPin}
-							placeholder={$_('amongUs.pinEntry.placeholder')}
-							maxlength="4"
-							inputmode="numeric"
-							autocomplete="off"
-						/>
+						<div class="pin-digits">
+							{#each [0, 1, 2, 3] as i}
+								<input
+									type="text"
+									class="pin-digit"
+									maxlength="2"
+									inputmode="numeric"
+									autocomplete="off"
+									value={checkPinDigits[i]}
+									oninput={(e) => handlePinDigitInput(e, i, checkPinDigits, (d) => checkPinDigits = d, i === 3 ? revealRole : undefined)}
+									onkeydown={(e) => handlePinDigitKeydown(e, i, checkPinDigits, (d) => checkPinDigits = d)}
+								/>
+							{/each}
+						</div>
 						<div class="button-row">
 							<button type="button" class="btn-secondary" onclick={cancelPinEntry}>{$_('common.back')}</button>
 							<button type="submit" class="btn-primary">{$_('amongUs.pinEntry.submitButton')}</button>
@@ -594,10 +656,39 @@
 		animation: fadeIn 0.3s ease;
 	}
 
-	/* PIN input masking */
-	.pin-input {
+	/* PIN digit inputs (OTP-style) */
+	.pin-label {
+		display: block;
+		text-align: center;
+		color: var(--text-secondary);
+		font-size: 0.9rem;
+		margin-bottom: 8px;
+	}
+
+	.pin-digits {
+		display: flex;
+		justify-content: center;
+		gap: 12px;
+		margin-bottom: 20px;
+	}
+
+	.pin-digit {
+		width: 50px;
+		height: 60px;
+		text-align: center;
+		font-size: 1.5rem;
+		font-weight: bold;
+		border: 2px solid var(--bg-input);
+		border-radius: 12px;
+		background: var(--bg-input);
+		color: var(--text-primary);
 		-webkit-text-security: disc;
 		text-security: disc;
+	}
+
+	.pin-digit:focus {
+		border-color: var(--accent);
+		outline: none;
 	}
 
 	/* Player list */
