@@ -5,7 +5,7 @@
 	// Types
 	type Screen = 'setup' | 'roleCheck' | 'roundEnd' | 'scoreboard';
 	type Role = 'impostor' | 'crewmate';
-	type RoleCheckStep = 'selection' | 'pin' | 'reveal';
+	type RoleCheckStep = 'selection' | 'pinSetup' | 'pin' | 'reveal';
 
 	interface PlayerStats {
 		timesImpostor: number;
@@ -21,7 +21,7 @@
 	}
 
 	interface GameState {
-		pin: string;
+		playerPins: Record<string, string>;
 		players: string[];
 		impostorCount: number;
 		currentRound: number;
@@ -41,11 +41,11 @@
 	let selectedPlayer: string | null = $state(null);
 	let newPlayerName = $state('');
 	let checkPin = $state('');
-	let gamePin = $state('');
+	let confirmPin = $state('');
 	let impostorCount = $state(1);
 
 	let gameState: GameState = $state({
-		pin: '',
+		playerPins: {},
 		players: [],
 		impostorCount: 1,
 		currentRound: 1,
@@ -92,8 +92,12 @@
 			const saved = localStorage.getItem('amongUsPartyGame');
 			if (saved) {
 				const loaded = JSON.parse(saved) as GameState;
+				// Handle migration from old single-pin format
+				if ('pin' in loaded && !('playerPins' in loaded)) {
+					(loaded as unknown as { playerPins: Record<string, string> }).playerPins = {};
+					delete (loaded as Record<string, unknown>).pin;
+				}
 				gameState = { ...gameState, ...loaded };
-				gamePin = gameState.pin;
 				impostorCount = gameState.impostorCount;
 
 				// If we have an active game, go to the role check screen
@@ -144,13 +148,12 @@
 		if (e.key === 'Enter') revealRole();
 	}
 
+	function handlePinSetupKeypress(e: KeyboardEvent) {
+		if (e.key === 'Enter') setupPin();
+	}
+
 	// Game Start
 	function startGame() {
-		if (!gamePin || gamePin.length !== 4 || !/^\d+$/.test(gamePin)) {
-			alert('Please enter a 4-digit PIN');
-			return;
-		}
-
 		if (gameState.players.length < 3) {
 			alert('You need at least 3 players to start');
 			return;
@@ -161,7 +164,6 @@
 			return;
 		}
 
-		gameState.pin = gamePin;
 		gameState.impostorCount = impostorCount;
 
 		assignRoles();
@@ -194,8 +196,14 @@
 	function selectPlayer(name: string) {
 		if (gameState.checkedPlayers.includes(name)) return;
 		selectedPlayer = name;
-		roleCheckStep = 'pin';
 		checkPin = '';
+		confirmPin = '';
+		// If player doesn't have a PIN yet, prompt them to create one
+		if (!gameState.playerPins[name]) {
+			roleCheckStep = 'pinSetup';
+		} else {
+			roleCheckStep = 'pin';
+		}
 	}
 
 	function cancelPinEntry() {
@@ -203,8 +211,35 @@
 		roleCheckStep = 'selection';
 	}
 
+	function setupPin() {
+		if (!checkPin || checkPin.length !== 4 || !/^\d+$/.test(checkPin)) {
+			alert('Please enter a 4-digit PIN');
+			return;
+		}
+
+		if (checkPin !== confirmPin) {
+			alert('PINs do not match! Try again.');
+			checkPin = '';
+			confirmPin = '';
+			return;
+		}
+
+		if (selectedPlayer) {
+			gameState.playerPins[selectedPlayer] = checkPin;
+			saveGameState();
+			roleCheckStep = 'reveal';
+
+			if (!gameState.checkedPlayers.includes(selectedPlayer)) {
+				gameState.checkedPlayers = [...gameState.checkedPlayers, selectedPlayer];
+				saveGameState();
+			}
+		}
+	}
+
 	function revealRole() {
-		if (checkPin !== gameState.pin) {
+		if (!selectedPlayer) return;
+
+		if (checkPin !== gameState.playerPins[selectedPlayer]) {
 			alert('Wrong PIN! Try again.');
 			checkPin = '';
 			return;
@@ -212,7 +247,7 @@
 
 		roleCheckStep = 'reveal';
 
-		if (selectedPlayer && !gameState.checkedPlayers.includes(selectedPlayer)) {
+		if (!gameState.checkedPlayers.includes(selectedPlayer)) {
 			gameState.checkedPlayers = [...gameState.checkedPlayers, selectedPlayer];
 			saveGameState();
 		}
@@ -275,12 +310,12 @@
 			return;
 		}
 
-		const keepPin = gameState.pin;
+		const keepPlayerPins = gameState.playerPins;
 		const keepPlayers = gameState.players;
 		const keepImpostorCount = gameState.impostorCount;
 
 		gameState = {
-			pin: keepPin,
+			playerPins: keepPlayerPins,
 			players: keepPlayers,
 			impostorCount: keepImpostorCount,
 			currentRound: 1,
@@ -318,18 +353,6 @@
 
 			<div class="card">
 				<h2>Game Setup</h2>
-
-				<div class="form-group">
-					<label for="game-pin">Game PIN (players will use this)</label>
-					<input
-						type="password"
-						id="game-pin"
-						bind:value={gamePin}
-						placeholder="Enter a 4-digit PIN"
-						maxlength="4"
-						inputmode="numeric"
-					/>
-				</div>
 
 				<div class="form-group">
 					<label for="impostor-count">Number of Impostors</label>
@@ -388,13 +411,36 @@
 							</button>
 						{/each}
 					</div>
+				{:else if roleCheckStep === 'pinSetup'}
+					<h2>Create Your PIN</h2>
+					<p class="player-name-display">{selectedPlayer}</p>
+					<p class="pin-setup-hint">Set a 4-digit PIN that only you will know</p>
+					<input
+						type="password"
+						bind:value={checkPin}
+						placeholder="Enter a 4-digit PIN"
+						maxlength="4"
+						inputmode="numeric"
+					/>
+					<input
+						type="password"
+						bind:value={confirmPin}
+						placeholder="Confirm your PIN"
+						maxlength="4"
+						inputmode="numeric"
+						onkeypress={handlePinSetupKeypress}
+					/>
+					<div class="button-row">
+						<button class="btn-secondary" onclick={cancelPinEntry}>Back</button>
+						<button class="btn-primary" onclick={setupPin}>Set PIN & Reveal Role</button>
+					</div>
 				{:else if roleCheckStep === 'pin'}
-					<h2>Enter PIN to reveal your role</h2>
+					<h2>Enter Your PIN</h2>
 					<p class="player-name-display">{selectedPlayer}</p>
 					<input
 						type="password"
 						bind:value={checkPin}
-						placeholder="Enter PIN"
+						placeholder="Enter your PIN"
 						maxlength="4"
 						inputmode="numeric"
 						onkeypress={handlePinKeypress}
@@ -613,6 +659,13 @@
 		text-align: center;
 		margin-bottom: 20px;
 		color: var(--accent);
+	}
+
+	.pin-setup-hint {
+		text-align: center;
+		color: var(--text-secondary);
+		font-size: 0.9rem;
+		margin-bottom: 16px;
 	}
 
 	/* Role display */
