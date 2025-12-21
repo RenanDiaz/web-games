@@ -379,6 +379,7 @@
 							type="text"
 							bind:value={newPlayerName}
 							placeholder={$_('amongUs.setup.playerPlaceholder')}
+							autocomplete="off"
 							onkeypress={handlePlayerKeypress}
 						/>
 						<button class="btn-secondary" onclick={addPlayer}>{$_('amongUs.setup.addButton')}</button>
