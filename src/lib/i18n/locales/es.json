@@ -1,0 +1,90 @@
+{
+	"common": {
+		"games": "Juegos",
+		"back": "Volver"
+	},
+	"home": {
+		"title": "Colección de Juegos Web",
+		"heading": "Juegos Web",
+		"subtitle": "Una colección de divertidos juegos de navegador",
+		"games": {
+			"amongUs": {
+				"title": "Among Us Party",
+				"description": "¡Juega Among Us en la vida real! Esta app asigna roles de Impostor y Tripulante en secreto a cada jugador usando un sistema de PIN. Registra puntuaciones a través de múltiples rondas.",
+				"tag": "Juego de Fiesta"
+			}
+		}
+	},
+	"amongUs": {
+		"title": "Among Us Party | Juegos Web",
+		"heading": "Among Us Party",
+		"subtitle": "Juego de asignación de roles en la vida real",
+		"setup": {
+			"heading": "Configuración del Juego",
+			"impostorCount": "Número de Impostores",
+			"impostorOption": "{count, plural, one {# Impostor} other {# Impostores}}",
+			"players": "Jugadores",
+			"playerPlaceholder": "Ingresa el nombre del jugador",
+			"addButton": "Agregar",
+			"startButton": "Iniciar Juego",
+			"playerExistsAlert": "¡Este jugador ya fue agregado!",
+			"notEnoughPlayersAlert": "Necesitas al menos 3 jugadores para comenzar",
+			"tooManyImpostorsAlert": "Demasiados impostores para el número de jugadores"
+		},
+		"roleCheck": {
+			"heading": "Revisa Tu Rol",
+			"round": "Ronda {round}",
+			"selectName": "Selecciona Tu Nombre",
+			"playersChecked": "{checked}/{total} jugadores verificados",
+			"endRound": "Terminar Ronda"
+		},
+		"pinSetup": {
+			"heading": "Crea Tu PIN",
+			"hint": "Establece un PIN de 4 dígitos que solo tú conocerás",
+			"enterPin": "Ingresa un PIN de 4 dígitos",
+			"confirmPin": "Confirma tu PIN",
+			"submitButton": "Establecer PIN y Revelar Rol",
+			"invalidPinAlert": "Por favor ingresa un PIN de 4 dígitos",
+			"pinMismatchAlert": "¡Los PINs no coinciden! Intenta de nuevo."
+		},
+		"pinEntry": {
+			"heading": "Ingresa Tu PIN",
+			"placeholder": "Ingresa tu PIN",
+			"submitButton": "Revelar Rol",
+			"wrongPinAlert": "¡PIN incorrecto! Intenta de nuevo."
+		},
+		"role": {
+			"impostor": "Impostor",
+			"crewmate": "Tripulante",
+			"fellowImpostors": "Tu compañero impostor: {names}",
+			"fellowImpostorsPlural": "Tus compañeros impostores: {names}",
+			"impostorHint": "¡Elimina a los tripulantes sin ser descubierto!",
+			"crewmateHint": "¡Completa tus tareas y encuentra al impostor!",
+			"hideButton": "Ocultar Rol"
+		},
+		"roundEnd": {
+			"heading": "Ronda {round} Completada",
+			"whoWon": "¿Quién Ganó?",
+			"crewmatesWin": "Ganan los Tripulantes",
+			"impostorsWin": "Ganan los Impostores",
+			"impostorsWere": "Los impostores de esta ronda fueron:"
+		},
+		"scoreboard": {
+			"heading": "Marcador",
+			"crewmates": "Tripulantes",
+			"impostors": "Impostores",
+			"vs": "VS",
+			"playerStats": "Estadísticas de Jugadores",
+			"roundHistory": "Historial de Rondas",
+			"noHistory": "No se han jugado rondas aún",
+			"roundResult": "Ronda {round}:",
+			"crewmatesWon": "Ganaron los Tripulantes",
+			"impostorsWon": "Ganaron los Impostores",
+			"impostorsLabel": "Impostores: {names}",
+			"backToGame": "Volver al Juego",
+			"nextRound": "Siguiente Ronda",
+			"resetGame": "Reiniciar Todo el Juego",
+			"resetConfirm": "¿Estás seguro de que quieres reiniciar todo el juego? Se perderán todas las puntuaciones."
+		}
+	}
+}

@@ -1,0 +1,90 @@
+{
+	"common": {
+		"games": "Games",
+		"back": "Back"
+	},
+	"home": {
+		"title": "Web Games Collection",
+		"heading": "Web Games",
+		"subtitle": "A collection of fun browser games",
+		"games": {
+			"amongUs": {
+				"title": "Among Us Party",
+				"description": "Play Among Us in real life! This app assigns Impostor and Crewmate roles secretly to each player using a PIN system. Track scores across multiple rounds.",
+				"tag": "Party Game"
+			}
+		}
+	},
+	"amongUs": {
+		"title": "Among Us Party | Web Games",
+		"heading": "Among Us Party",
+		"subtitle": "Real-life role assignment game",
+		"setup": {
+			"heading": "Game Setup",
+			"impostorCount": "Number of Impostors",
+			"impostorOption": "{count, plural, one {# Impostor} other {# Impostors}}",
+			"players": "Players",
+			"playerPlaceholder": "Enter player name",
+			"addButton": "Add",
+			"startButton": "Start Game",
+			"playerExistsAlert": "This player is already added!",
+			"notEnoughPlayersAlert": "You need at least 3 players to start",
+			"tooManyImpostorsAlert": "Too many impostors for the number of players"
+		},
+		"roleCheck": {
+			"heading": "Check Your Role",
+			"round": "Round {round}",
+			"selectName": "Select Your Name",
+			"playersChecked": "{checked}/{total} players checked",
+			"endRound": "End Round"
+		},
+		"pinSetup": {
+			"heading": "Create Your PIN",
+			"hint": "Set a 4-digit PIN that only you will know",
+			"enterPin": "Enter a 4-digit PIN",
+			"confirmPin": "Confirm your PIN",
+			"submitButton": "Set PIN & Reveal Role",
+			"invalidPinAlert": "Please enter a 4-digit PIN",
+			"pinMismatchAlert": "PINs do not match! Try again."
+		},
+		"pinEntry": {
+			"heading": "Enter Your PIN",
+			"placeholder": "Enter your PIN",
+			"submitButton": "Reveal Role",
+			"wrongPinAlert": "Wrong PIN! Try again."
+		},
+		"role": {
+			"impostor": "Impostor",
+			"crewmate": "Crewmate",
+			"fellowImpostors": "Your fellow impostor: {names}",
+			"fellowImpostorsPlural": "Your fellow impostors: {names}",
+			"impostorHint": "Eliminate the crewmates without getting caught!",
+			"crewmateHint": "Complete your tasks and find the impostor!",
+			"hideButton": "Hide Role"
+		},
+		"roundEnd": {
+			"heading": "Round {round} Complete",
+			"whoWon": "Who Won?",
+			"crewmatesWin": "Crewmates Win",
+			"impostorsWin": "Impostors Win",
+			"impostorsWere": "This round's impostors were:"
+		},
+		"scoreboard": {
+			"heading": "Scoreboard",
+			"crewmates": "Crewmates",
+			"impostors": "Impostors",
+			"vs": "VS",
+			"playerStats": "Player Stats",
+			"roundHistory": "Round History",
+			"noHistory": "No rounds played yet",
+			"roundResult": "Round {round}:",
+			"crewmatesWon": "Crewmates won",
+			"impostorsWon": "Impostors won",
+			"impostorsLabel": "Impostors: {names}",
+			"backToGame": "Back to Game",
+			"nextRound": "Next Round",
+			"resetGame": "Reset Entire Game",
+			"resetConfirm": "Are you sure you want to reset the entire game? All scores will be lost."
+		}
+	}
+}
