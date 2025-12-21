@@ -153,11 +153,6 @@
 		if (e.key === 'Enter') setupPin();
 	}
 
-	function removeReadonly(e: FocusEvent) {
-		const input = e.target as HTMLInputElement;
-		input.removeAttribute('readonly');
-	}
-
 	// Game Start
 	function startGame() {
 		if (gameState.players.length < 3) {
@@ -422,52 +417,51 @@
 					<h2>{$_('amongUs.pinSetup.heading')}</h2>
 					<p class="player-name-display">{selectedPlayer}</p>
 					<p class="pin-setup-hint">{$_('amongUs.pinSetup.hint')}</p>
-					<input
-						type="text"
-						class="pin-input"
-						bind:value={checkPin}
-						placeholder={$_('amongUs.pinSetup.enterPin')}
-						maxlength="4"
-						inputmode="numeric"
-						autocomplete="off"
-						readonly
-						onfocus={removeReadonly}
-					/>
-					<input
-						type="text"
-						class="pin-input"
-						bind:value={confirmPin}
-						placeholder={$_('amongUs.pinSetup.confirmPin')}
-						maxlength="4"
-						inputmode="numeric"
-						autocomplete="off"
-						readonly
-						onfocus={removeReadonly}
-						onkeypress={handlePinSetupKeypress}
-					/>
-					<div class="button-row">
-						<button class="btn-secondary" onclick={cancelPinEntry}>{$_('common.back')}</button>
-						<button class="btn-primary" onclick={setupPin}>{$_('amongUs.pinSetup.submitButton')}</button>
-					</div>
+					<form autocomplete="off" onsubmit={(e) => { e.preventDefault(); setupPin(); }}>
+						<input
+							type="text"
+							class="pin-input"
+							name="game-pin-{Date.now()}"
+							bind:value={checkPin}
+							placeholder={$_('amongUs.pinSetup.enterPin')}
+							maxlength="4"
+							inputmode="numeric"
+							autocomplete="off"
+						/>
+						<input
+							type="text"
+							class="pin-input"
+							name="game-pin-confirm-{Date.now()}"
+							bind:value={confirmPin}
+							placeholder={$_('amongUs.pinSetup.confirmPin')}
+							maxlength="4"
+							inputmode="numeric"
+							autocomplete="off"
+						/>
+						<div class="button-row">
+							<button type="button" class="btn-secondary" onclick={cancelPinEntry}>{$_('common.back')}</button>
+							<button type="submit" class="btn-primary">{$_('amongUs.pinSetup.submitButton')}</button>
+						</div>
+					</form>
 				{:else if roleCheckStep === 'pin'}
 					<h2>{$_('amongUs.pinEntry.heading')}</h2>
 					<p class="player-name-display">{selectedPlayer}</p>
-					<input
-						type="text"
-						class="pin-input"
-						bind:value={checkPin}
-						placeholder={$_('amongUs.pinEntry.placeholder')}
-						maxlength="4"
-						inputmode="numeric"
-						autocomplete="off"
-						readonly
-						onfocus={removeReadonly}
-						onkeypress={handlePinKeypress}
-					/>
-					<div class="button-row">
-						<button class="btn-secondary" onclick={cancelPinEntry}>{$_('common.back')}</button>
-						<button class="btn-primary" onclick={revealRole}>{$_('amongUs.pinEntry.submitButton')}</button>
-					</div>
+					<form autocomplete="off" onsubmit={(e) => { e.preventDefault(); revealRole(); }}>
+						<input
+							type="text"
+							class="pin-input"
+							name="game-pin-entry-{Date.now()}"
+							bind:value={checkPin}
+							placeholder={$_('amongUs.pinEntry.placeholder')}
+							maxlength="4"
+							inputmode="numeric"
+							autocomplete="off"
+						/>
+						<div class="button-row">
+							<button type="button" class="btn-secondary" onclick={cancelPinEntry}>{$_('common.back')}</button>
+							<button type="submit" class="btn-primary">{$_('amongUs.pinEntry.submitButton')}</button>
+						</div>
+					</form>
 				{:else if roleCheckStep === 'reveal'}
 					<div class="role-display" class:impostor={selectedPlayerRole === 'impostor'} class:crewmate={selectedPlayerRole === 'crewmate'}>
 						{#if selectedPlayerRole === 'impostor'}
