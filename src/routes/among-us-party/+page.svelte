@@ -417,6 +417,11 @@
 					<h2>{$_('amongUs.pinSetup.heading')}</h2>
 					<p class="player-name-display">{selectedPlayer}</p>
 					<p class="pin-setup-hint">{$_('amongUs.pinSetup.hint')}</p>
+					<!-- Hidden decoy fields to capture Safari autofill -->
+					<div class="autofill-decoy" aria-hidden="true">
+						<input type="text" name="decoy-user" tabindex="-1" />
+						<input type="password" name="decoy-pass" tabindex="-1" />
+					</div>
 					<input
 						type="text"
 						class="pin-input"
@@ -443,6 +448,11 @@
 				{:else if roleCheckStep === 'pin'}
 					<h2>{$_('amongUs.pinEntry.heading')}</h2>
 					<p class="player-name-display">{selectedPlayer}</p>
+					<!-- Hidden decoy fields to capture Safari autofill -->
+					<div class="autofill-decoy" aria-hidden="true">
+						<input type="text" name="decoy-user" tabindex="-1" />
+						<input type="password" name="decoy-pass" tabindex="-1" />
+					</div>
 					<input
 						type="text"
 						class="pin-input"
@@ -593,6 +603,15 @@
 	.pin-input {
 		-webkit-text-security: disc;
 		text-security: disc;
+	}
+
+	/* Hidden decoy fields to capture autofill */
+	.autofill-decoy {
+		position: absolute;
+		left: -9999px;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
 	}
 
 	/* Player list */
