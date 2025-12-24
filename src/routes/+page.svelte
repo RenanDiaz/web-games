@@ -38,8 +38,7 @@
 			icon: '✋',
 			titleKey: 'home.games.stopParty.title',
 			descriptionKey: 'home.games.stopParty.description',
-			tagKey: 'home.games.stopParty.tag',
-			comingSoon: true
+			tagKey: 'home.games.stopParty.tag'
 		}
 	];
 </script>
