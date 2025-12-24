@@ -12,7 +12,48 @@
 				"title": "Among Us Party",
 				"description": "¡Juega Among Us en la vida real! Esta app asigna roles de Impostor y Tripulante en secreto a cada jugador usando un sistema de PIN. Registra puntuaciones a través de múltiples rondas.",
 				"tag": "Juego de Fiesta"
+			},
+			"hedbanz": {
+				"title": "Hedbanz - Adivina Quién",
+				"description": "Un jugador no mira la pantalla mientras los demás ven un personaje y dan pistas. ¡Adivina qué eres con preguntas de sí/no!",
+				"tag": "Juego de Fiesta"
 			}
+		}
+	},
+	"hedbanz": {
+		"title": "Hedbanz - Adivina Quién | Juegos Web",
+		"heading": "Hedbanz - Adivina Quién",
+		"subtitle": "¡Adivina qué personaje tienes con preguntas de sí/no!",
+		"noItemsAlert": "Selecciona al menos una categoría o agrega items personalizados",
+		"categories": {
+			"movies": "Personajes de Películas",
+			"animals": "Animales",
+			"professions": "Profesiones",
+			"food": "Comida",
+			"objects": "Objetos",
+			"custom": "Personalizado"
+		},
+		"setup": {
+			"categories": "Categorías",
+			"customItems": "Items Personalizados",
+			"customHint": "Agrega personajes o cosas personalizadas (uno por línea)",
+			"customPlaceholder": "Ejemplo:\nBob Esponja\nPikachu\nLa Torre Eiffel",
+			"customCategory": "Personalizado",
+			"timer": "Temporizador",
+			"noLimit": "Sin límite",
+			"customTimer": "Segundos personalizados:",
+			"startButton": "Iniciar Juego"
+		},
+		"game": {
+			"reveal": "Revelar",
+			"hide": "Ocultar",
+			"next": "Siguiente",
+			"fullscreen": "Pantalla Completa",
+			"reset": "Reiniciar",
+			"exit": "Salir",
+			"timeUp": "¡Tiempo agotado!",
+			"total": "Total",
+			"remaining": "Restantes"
 		}
 	},
 	"amongUs": {
