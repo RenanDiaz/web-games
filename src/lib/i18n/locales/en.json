@@ -7,10 +7,26 @@
 		"title": "Web Games Collection",
 		"heading": "Web Games",
 		"subtitle": "A collection of fun browser games",
+		"comingSoon": "Coming Soon",
 		"games": {
 			"amongUs": {
 				"title": "Among Us Party",
 				"description": "Play Among Us in real life! This app assigns Impostor and Crewmate roles secretly to each player using a PIN system. Track scores across multiple rounds.",
+				"tag": "Party Game"
+			},
+			"shipwrecker": {
+				"title": "Shipwrecker",
+				"description": "A naval battle game where you sink enemy ships. Test your strategic skills on the high seas!",
+				"tag": "Strategy"
+			},
+			"bingoParty": {
+				"title": "Bingo Party",
+				"description": "Classic bingo game for parties and gatherings. Generate cards and play with friends!",
+				"tag": "Party Game"
+			},
+			"stopParty": {
+				"title": "Stop Party",
+				"description": "The classic categories game! Race against friends to fill categories with words starting with a random letter.",
 				"tag": "Party Game"
 			}
 		}
