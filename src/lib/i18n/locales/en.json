@@ -28,6 +28,11 @@
 				"title": "Stop Party",
 				"description": "The classic categories game! Race against friends to fill categories with words starting with a random letter.",
 				"tag": "Party Game"
+			},
+			"hangmanParty": {
+				"title": "Hangman Party",
+				"description": "The classic word guessing game! One player thinks of a word and others try to guess it letter by letter.",
+				"tag": "Party Game"
 			}
 		}
 	},

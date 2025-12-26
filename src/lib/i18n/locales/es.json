@@ -28,6 +28,11 @@
 				"title": "Stop Party",
 				"description": "¡El clásico juego de categorías! Compite contra amigos para llenar categorías con palabras que empiecen con una letra aleatoria.",
 				"tag": "Juego de Fiesta"
+			},
+			"hangmanParty": {
+				"title": "Hangman Party",
+				"description": "¡El clásico juego de adivinar palabras! Un jugador piensa en una palabra y los demás intentan adivinarla letra por letra.",
+				"tag": "Juego de Fiesta"
 			}
 		}
 	},

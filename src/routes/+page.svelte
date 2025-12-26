@@ -39,6 +39,13 @@
 			titleKey: 'home.games.stopParty.title',
 			descriptionKey: 'home.games.stopParty.description',
 			tagKey: 'home.games.stopParty.tag'
+		},
+		{
+			external: 'https://hangman-party.vercel.app',
+			icon: '🪢',
+			titleKey: 'home.games.hangmanParty.title',
+			descriptionKey: 'home.games.hangmanParty.description',
+			tagKey: 'home.games.hangmanParty.tag'
 		}
 	];
 </script>
