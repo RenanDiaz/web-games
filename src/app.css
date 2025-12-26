@@ -17,6 +17,10 @@
 	--accent: #e94560;
 }
 
+html {
+	background-color: var(--bg-dark);
+}
+
 body {
 	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
 	background: linear-gradient(135deg, var(--bg-dark) 0%, #0f0f23 100%);

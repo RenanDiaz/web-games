@@ -52,6 +52,9 @@
 		display: flex;
 		align-items: center;
 		padding: 12px 20px;
+		padding-top: max(12px, env(safe-area-inset-top));
+		padding-left: max(20px, env(safe-area-inset-left));
+		padding-right: max(20px, env(safe-area-inset-right));
 		background: rgba(22, 33, 62, 0.8);
 		backdrop-filter: blur(10px);
 		position: sticky;
