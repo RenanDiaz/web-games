@@ -20,6 +20,13 @@
 			tagKey: 'home.games.amongUs.tag'
 		},
 		{
+			slug: 'hedbanz',
+			icon: '🎯',
+			titleKey: 'home.games.hedbanz.title',
+			descriptionKey: 'home.games.hedbanz.description',
+			tagKey: 'home.games.hedbanz.tag'
+		},
+		{
 			external: 'https://shipwrecker.vercel.app',
 			icon: '🚢',
 			titleKey: 'home.games.shipwrecker.title',

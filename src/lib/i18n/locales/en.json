@@ -14,6 +14,11 @@
 				"description": "Play Among Us in real life! This app assigns Impostor and Crewmate roles secretly to each player using a PIN system. Track scores across multiple rounds.",
 				"tag": "Party Game"
 			},
+			"hedbanz": {
+				"title": "Hedbanz - Guess Who",
+				"description": "One player doesn't look at the screen while others see a character and give clues. Guess what you are with yes/no questions!",
+				"tag": "Party Game"
+			},
 			"shipwrecker": {
 				"title": "Shipwrecker",
 				"description": "A naval battle game where you sink enemy ships. Test your strategic skills on the high seas!",
@@ -34,6 +39,42 @@
 				"description": "The classic word guessing game! One player thinks of a word and others try to guess it letter by letter.",
 				"tag": "Party Game"
 			}
+		}
+	},
+	"hedbanz": {
+		"title": "Hedbanz - Guess Who | Web Games",
+		"heading": "Hedbanz - Guess Who",
+		"subtitle": "Guess what character you have with yes/no questions!",
+		"noItemsAlert": "Select at least one category or add custom items",
+		"categories": {
+			"movies": "Movie Characters",
+			"animals": "Animals",
+			"professions": "Professions",
+			"food": "Food",
+			"objects": "Objects",
+			"custom": "Custom"
+		},
+		"setup": {
+			"categories": "Categories",
+			"customItems": "Custom Items",
+			"customHint": "Add custom characters or things (one per line)",
+			"customPlaceholder": "Example:\nSpongeBob\nPikachu\nThe Eiffel Tower",
+			"customCategory": "Custom",
+			"timer": "Timer",
+			"noLimit": "No limit",
+			"customTimer": "Custom seconds:",
+			"startButton": "Start Game"
+		},
+		"game": {
+			"reveal": "Reveal",
+			"hide": "Hide",
+			"next": "Next",
+			"fullscreen": "Fullscreen",
+			"reset": "Reset",
+			"exit": "Exit",
+			"timeUp": "Time's up!",
+			"total": "Total",
+			"remaining": "Remaining"
 		}
 	},
 	"amongUs": {
