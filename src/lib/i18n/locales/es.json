@@ -7,6 +7,7 @@
 		"title": "Colección de Juegos Web",
 		"heading": "Juegos Web",
 		"subtitle": "Una colección de divertidos juegos de navegador",
+		"comingSoon": "Próximamente",
 		"games": {
 			"amongUs": {
 				"title": "Among Us Party",
@@ -16,6 +17,21 @@
 			"hedbanz": {
 				"title": "Hedbanz - Adivina Quién",
 				"description": "Un jugador no mira la pantalla mientras los demás ven un personaje y dan pistas. ¡Adivina qué eres con preguntas de sí/no!",
+				"tag": "Juego de Fiesta"
+			},
+			"shipwrecker": {
+				"title": "Shipwrecker",
+				"description": "Un juego de batalla naval donde hundes barcos enemigos. ¡Pon a prueba tus habilidades estratégicas en alta mar!",
+				"tag": "Estrategia"
+			},
+			"bingoParty": {
+				"title": "Bingo Party",
+				"description": "Juego clásico de bingo para fiestas y reuniones. ¡Genera cartones y juega con amigos!",
+				"tag": "Juego de Fiesta"
+			},
+			"stopParty": {
+				"title": "Stop Party",
+				"description": "¡El clásico juego de categorías! Compite contra amigos para llenar categorías con palabras que empiecen con una letra aleatoria.",
 				"tag": "Juego de Fiesta"
 			}
 		}
