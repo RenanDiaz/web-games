@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
+	import { PUBLIC_PARTYKIT_HOST } from '$env/static/public';
 	import { _ } from 'svelte-i18n';
 	import PartySocket from 'partysocket';
 
@@ -44,9 +45,7 @@
 		| { type: 'kicked' };
 
 	// Constants
-	const PARTYKIT_HOST = browser
-		? localStorage.getItem('impostor_partykit_host') || 'localhost:1999'
-		: 'localhost:1999';
+	const PARTYKIT_HOST = PUBLIC_PARTYKIT_HOST || 'localhost:1999';
 
 	const CATEGORIES = ['animals', 'food', 'places', 'objects', 'professions'];
 
