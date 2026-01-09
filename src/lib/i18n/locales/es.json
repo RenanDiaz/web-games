@@ -176,6 +176,8 @@
 			"title": "Sala de Espera",
 			"roomCode": "Código de Sala",
 			"tapToCopy": "Toca para copiar",
+			"shareRoom": "Invitar Jugadores",
+			"shareText": "¡Únete a mi sala de Impostor! Código: {code}",
 			"players": "Jugadores",
 			"host": "Anfitrión",
 			"you": "Tú",

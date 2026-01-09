@@ -176,6 +176,8 @@
 			"title": "Waiting Room",
 			"roomCode": "Room Code",
 			"tapToCopy": "Tap to copy",
+			"shareRoom": "Invite Players",
+			"shareText": "Join my Impostor room! Code: {code}",
 			"players": "Players",
 			"host": "Host",
 			"you": "You",

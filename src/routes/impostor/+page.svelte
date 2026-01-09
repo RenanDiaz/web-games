@@ -84,6 +84,15 @@
 		if (browser) {
 			const savedName = localStorage.getItem('impostor_player_name');
 			if (savedName) playerName = savedName;
+
+			// Check if there's a room code in the URL
+			const urlParams = new URLSearchParams(window.location.search);
+			const roomParam = urlParams.get('room');
+			if (roomParam) {
+				joinRoomCode = roomParam.toUpperCase();
+				// Clean up the URL without reloading
+				window.history.replaceState({}, '', '/impostor');
+			}
 		}
 	});
 
@@ -271,6 +280,39 @@
 		}
 	}
 
+	function getRoomUrl(): string {
+		if (browser) {
+			return `${window.location.origin}/impostor?room=${roomCode}`;
+		}
+		return '';
+	}
+
+	async function shareRoom() {
+		if (!browser) return;
+
+		const roomUrl = getRoomUrl();
+		const shareData = {
+			title: $_('impostor.title'),
+			text: $_('impostor.lobby.shareText', { values: { code: roomCode } }),
+			url: roomUrl
+		};
+
+		// Use Web Share API if available
+		if (navigator.share && navigator.canShare?.(shareData)) {
+			try {
+				await navigator.share(shareData);
+			} catch (err) {
+				// User cancelled or error - fall back to copy
+				if ((err as Error).name !== 'AbortError') {
+					await navigator.clipboard.writeText(roomUrl);
+				}
+			}
+		} else {
+			// Fallback: copy URL to clipboard
+			await navigator.clipboard.writeText(roomUrl);
+		}
+	}
+
 	function getPlayerName(playerId: string): string {
 		return gameState?.players.find((p) => p.id === playerId)?.name ?? playerId;
 	}
@@ -344,6 +386,17 @@
 				<span class="code">{roomCode}</span>
 				<span class="hint">{$_('impostor.lobby.tapToCopy')}</span>
 			</div>
+
+			<button class="btn share-btn" onclick={shareRoom}>
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<circle cx="18" cy="5" r="3"></circle>
+					<circle cx="6" cy="12" r="3"></circle>
+					<circle cx="18" cy="19" r="3"></circle>
+					<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+					<line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+				</svg>
+				{$_('impostor.lobby.shareRoom')}
+			</button>
 
 			<div class="players-section">
 				<h2>{$_('impostor.lobby.players')} ({connectedPlayers.length})</h2>
@@ -849,6 +902,25 @@
 		font-size: 0.75rem;
 		color: #666;
 		margin-top: 0.25rem;
+	}
+
+	.share-btn {
+		width: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		background: #22c55e;
+		color: white;
+		margin-bottom: 1.5rem;
+	}
+
+	.share-btn:hover {
+		background: #16a34a;
+	}
+
+	.share-btn svg {
+		flex-shrink: 0;
 	}
 
 	.players-section {
