@@ -38,6 +38,11 @@
 				"title": "Hangman Party",
 				"description": "The classic word guessing game! One player thinks of a word and others try to guess it letter by letter.",
 				"tag": "Party Game"
+			},
+			"impostor": {
+				"title": "Impostor",
+				"description": "Find the impostor! Everyone gets a secret word except the impostor. Describe it without revealing it while detecting who's faking.",
+				"tag": "Multiplayer"
 			}
 		}
 	},
@@ -147,6 +152,81 @@
 			"nextRound": "Next Round",
 			"resetGame": "Reset Entire Game",
 			"resetConfirm": "Are you sure you want to reset the entire game? All scores will be lost."
+		}
+	},
+	"impostor": {
+		"title": "Impostor",
+		"subtitle": "Find the impostor among your friends",
+		"connecting": "Connecting...",
+		"errors": {
+			"enterName": "Please enter your name",
+			"enterRoomCode": "Please enter the room code",
+			"connectionFailed": "Connection failed. Make sure the server is running.",
+			"kicked": "You have been kicked from the room"
+		},
+		"home": {
+			"yourName": "Your name",
+			"namePlaceholder": "Enter your name",
+			"createRoom": "Create Room",
+			"or": "or",
+			"roomCodePlaceholder": "ABCD",
+			"joinRoom": "Join"
+		},
+		"lobby": {
+			"title": "Waiting Room",
+			"roomCode": "Room Code",
+			"tapToCopy": "Tap to copy",
+			"players": "Players",
+			"host": "Host",
+			"you": "You",
+			"disconnected": "Disconnected",
+			"kick": "Kick",
+			"settings": "Settings",
+			"impostorCount": "Number of Impostors",
+			"category": "Category",
+			"customWords": "Custom Words",
+			"customWordsPlaceholder": "pizza, beach, doctor...",
+			"add": "Add",
+			"clearAll": "Clear all",
+			"customWordsActive": "Custom words will replace the selected category",
+			"startGame": "Start Game",
+			"needMorePlayers": "Need 3+ players",
+			"waitingForHost": "Waiting for host to start the game..."
+		},
+		"categories": {
+			"animals": "Animals",
+			"food": "Food",
+			"places": "Places",
+			"objects": "Objects",
+			"professions": "Professions"
+		},
+		"playing": {
+			"tapToReveal": "Tap the button to see your role",
+			"showRole": "Show My Role",
+			"hideRole": "Hide Role",
+			"youAreImpostor": "You are the Impostor!",
+			"youAreCitizen": "You are a Citizen",
+			"impostorHint": "You don't know the word. Pretend you do!",
+			"secretWord": "Secret Word",
+			"playersCount": "{count} players in game",
+			"impostorsCount": "{count} impostor(s)",
+			"hostControls": "Host Controls",
+			"impostorsWin": "Impostor Wins",
+			"citizensWin": "Citizens Win"
+		},
+		"voting": {
+			"title": "Voting",
+			"instruction": "Who do you think is the impostor?",
+			"votesCount": "{current} of {total} votes"
+		},
+		"results": {
+			"impostorsWon": "Impostor Won!",
+			"citizensWon": "Citizens Won!",
+			"secretWord": "The word was",
+			"impostorsWere": "The impostor was",
+			"votes": "Votes",
+			"playAgain": "Play Again",
+			"waitingForHost": "Waiting for host to start another round..."
 		}
 	}
 }
