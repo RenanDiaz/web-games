@@ -25,7 +25,8 @@ const WORD_CATEGORIES: Record<string, string[]> = {
 };
 
 interface Player {
-  id: string;
+  id: string;           // Persistent player ID (stored in client localStorage)
+  connectionId: string; // Current PartyKit connection ID
   name: string;
   isHost: boolean;
   isConnected: boolean;
@@ -54,7 +55,7 @@ interface GameState {
 }
 
 type ClientMessage =
-  | { type: "join"; name: string }
+  | { type: "join"; name: string; playerId: string }
   | { type: "start-game" }
   | { type: "vote"; targetId: string }
   | { type: "end-round"; impostorsWon: boolean }
@@ -68,9 +69,17 @@ type ServerMessage =
   | { type: "error"; message: string }
   | { type: "kicked" };
 
+// Player data sent to clients (without internal connectionId)
+interface PublicPlayer {
+  id: string;
+  name: string;
+  isHost: boolean;
+  isConnected: boolean;
+}
+
 interface PublicGameState {
   phase: GameState["phase"];
-  players: Player[];
+  players: PublicPlayer[];
   hostId: string | null;
   settings: GameState["settings"];
   currentRound: {
@@ -101,9 +110,17 @@ export default class ImpostorServer implements Party.Server {
   }
 
   getPublicState(playerId: string): PublicGameState {
+    // Map players to exclude internal connectionId
+    const publicPlayers: PublicPlayer[] = this.state.players.map(p => ({
+      id: p.id,
+      name: p.name,
+      isHost: p.isHost,
+      isConnected: p.isConnected
+    }));
+
     return {
       phase: this.state.phase,
-      players: this.state.players,
+      players: publicPlayers,
       hostId: this.state.hostId,
       settings: this.state.settings,
       currentRound: this.state.currentRound ? {
@@ -116,9 +133,15 @@ export default class ImpostorServer implements Party.Server {
     };
   }
 
+  // Helper to get playerId from connectionId
+  getPlayerIdByConnection(connectionId: string): string | null {
+    const player = this.state.players.find(p => p.connectionId === connectionId);
+    return player?.id ?? null;
+  }
+
   broadcastState() {
     for (const player of this.state.players) {
-      const conn = this.room.getConnection(player.id);
+      const conn = this.room.getConnection(player.connectionId);
       if (conn) {
         const message: ServerMessage = {
           type: "state",
@@ -132,7 +155,10 @@ export default class ImpostorServer implements Party.Server {
   sendRole(playerId: string) {
     if (!this.state.currentRound) return;
 
-    const conn = this.room.getConnection(playerId);
+    const player = this.state.players.find(p => p.id === playerId);
+    if (!player) return;
+
+    const conn = this.room.getConnection(player.connectionId);
     if (!conn) return;
 
     const isImpostor = this.state.currentRound.impostorIds.includes(playerId);
@@ -145,28 +171,30 @@ export default class ImpostorServer implements Party.Server {
   }
 
   onConnect(conn: Party.Connection) {
-    // Send current state to the connecting player
-    const existingPlayer = this.state.players.find(p => p.id === conn.id);
+    // onConnect is called before we know the playerId
+    // The actual reconnection logic happens in handleJoin
+    // This is just for quick reconnects where the connectionId hasn't changed
+    const existingPlayer = this.state.players.find(p => p.connectionId === conn.id);
     if (existingPlayer) {
       existingPlayer.isConnected = true;
       this.broadcastState();
 
       // If game is in progress, send their role
       if (this.state.phase === "playing" || this.state.phase === "voting") {
-        this.sendRole(conn.id);
+        this.sendRole(existingPlayer.id);
       }
     }
   }
 
   onClose(conn: Party.Connection) {
-    const player = this.state.players.find(p => p.id === conn.id);
+    const player = this.state.players.find(p => p.connectionId === conn.id);
     if (player) {
       player.isConnected = false;
 
       // If host disconnected and there are other players, assign new host
-      if (player.isHost && this.state.players.some(p => p.isConnected && p.id !== conn.id)) {
+      if (player.isHost && this.state.players.some(p => p.isConnected && p.id !== player.id)) {
         player.isHost = false;
-        const newHost = this.state.players.find(p => p.isConnected && p.id !== conn.id);
+        const newHost = this.state.players.find(p => p.isConnected && p.id !== player.id);
         if (newHost) {
           newHost.isHost = true;
           this.state.hostId = newHost.id;
@@ -183,7 +211,7 @@ export default class ImpostorServer implements Party.Server {
 
       switch (data.type) {
         case "join":
-          this.handleJoin(sender, data.name);
+          this.handleJoin(sender, data.name, data.playerId);
           break;
         case "start-game":
           this.handleStartGame(sender);
@@ -209,17 +237,25 @@ export default class ImpostorServer implements Party.Server {
     }
   }
 
-  handleJoin(conn: Party.Connection, name: string) {
-    // Check if player already exists
-    const existingPlayer = this.state.players.find(p => p.id === conn.id);
+  handleJoin(conn: Party.Connection, name: string, playerId: string) {
+    // Check if player already exists by their persistent playerId
+    const existingPlayer = this.state.players.find(p => p.id === playerId);
+
     if (existingPlayer) {
+      // Player is reconnecting - update their connection and name
+      existingPlayer.connectionId = conn.id;
       existingPlayer.name = name;
       existingPlayer.isConnected = true;
       this.broadcastState();
+
+      // If game is in progress, send their role
+      if (this.state.phase === "playing" || this.state.phase === "voting") {
+        this.sendRole(existingPlayer.id);
+      }
       return;
     }
 
-    // Check if game is already in progress
+    // New player trying to join - check if game is already in progress
     if (this.state.phase !== "lobby") {
       const errorMessage: ServerMessage = {
         type: "error",
@@ -232,7 +268,8 @@ export default class ImpostorServer implements Party.Server {
     // Add new player
     const isFirstPlayer = this.state.players.length === 0;
     const player: Player = {
-      id: conn.id,
+      id: playerId,
+      connectionId: conn.id,
       name,
       isHost: isFirstPlayer,
       isConnected: true
@@ -241,15 +278,18 @@ export default class ImpostorServer implements Party.Server {
     this.state.players.push(player);
 
     if (isFirstPlayer) {
-      this.state.hostId = conn.id;
+      this.state.hostId = playerId;
     }
 
     this.broadcastState();
   }
 
   handleStartGame(conn: Party.Connection) {
+    const playerId = this.getPlayerIdByConnection(conn.id);
+    if (!playerId) return;
+
     // Only host can start
-    if (this.state.hostId !== conn.id) {
+    if (this.state.hostId !== playerId) {
       const errorMessage: ServerMessage = {
         type: "error",
         message: "Only host can start the game"
@@ -300,6 +340,9 @@ export default class ImpostorServer implements Party.Server {
   }
 
   handleVote(conn: Party.Connection, targetId: string) {
+    const playerId = this.getPlayerIdByConnection(conn.id);
+    if (!playerId) return;
+
     if (this.state.phase !== "playing" && this.state.phase !== "voting") {
       return;
     }
@@ -307,7 +350,7 @@ export default class ImpostorServer implements Party.Server {
     if (!this.state.currentRound) return;
 
     // Can't vote for yourself
-    if (targetId === conn.id) {
+    if (targetId === playerId) {
       const errorMessage: ServerMessage = {
         type: "error",
         message: "Can't vote for yourself"
@@ -317,14 +360,17 @@ export default class ImpostorServer implements Party.Server {
     }
 
     // Record vote
-    this.state.currentRound.votes[conn.id] = targetId;
+    this.state.currentRound.votes[playerId] = targetId;
     this.state.phase = "voting";
     this.broadcastState();
   }
 
   handleEndRound(conn: Party.Connection, impostorsWon: boolean) {
+    const playerId = this.getPlayerIdByConnection(conn.id);
+    if (!playerId) return;
+
     // Only host can end round
-    if (this.state.hostId !== conn.id) {
+    if (this.state.hostId !== playerId) {
       return;
     }
 
@@ -344,8 +390,11 @@ export default class ImpostorServer implements Party.Server {
   }
 
   handleUpdateSettings(conn: Party.Connection, settings: Partial<GameState["settings"]>) {
+    const playerId = this.getPlayerIdByConnection(conn.id);
+    if (!playerId) return;
+
     // Only host can update settings
-    if (this.state.hostId !== conn.id) {
+    if (this.state.hostId !== playerId) {
       return;
     }
 
@@ -361,8 +410,11 @@ export default class ImpostorServer implements Party.Server {
   }
 
   handleBackToLobby(conn: Party.Connection) {
+    const playerId = this.getPlayerIdByConnection(conn.id);
+    if (!playerId) return;
+
     // Only host can go back to lobby
-    if (this.state.hostId !== conn.id) {
+    if (this.state.hostId !== playerId) {
       return;
     }
 
@@ -371,22 +423,26 @@ export default class ImpostorServer implements Party.Server {
     this.broadcastState();
   }
 
-  handleKickPlayer(conn: Party.Connection, playerId: string) {
+  handleKickPlayer(conn: Party.Connection, targetPlayerId: string) {
+    const playerId = this.getPlayerIdByConnection(conn.id);
+    if (!playerId) return;
+
     // Only host can kick
-    if (this.state.hostId !== conn.id) {
+    if (this.state.hostId !== playerId) {
       return;
     }
 
     // Can't kick yourself
-    if (playerId === conn.id) {
+    if (targetPlayerId === playerId) {
       return;
     }
 
     // Find and remove player
-    const playerIndex = this.state.players.findIndex(p => p.id === playerId);
+    const playerIndex = this.state.players.findIndex(p => p.id === targetPlayerId);
     if (playerIndex !== -1) {
+      const targetPlayer = this.state.players[playerIndex];
       // Notify the kicked player
-      const kickedConn = this.room.getConnection(playerId);
+      const kickedConn = this.room.getConnection(targetPlayer.connectionId);
       if (kickedConn) {
         const kickMessage: ServerMessage = { type: "kicked" };
         kickedConn.send(JSON.stringify(kickMessage));
