@@ -38,6 +38,11 @@
 				"title": "Hangman Party",
 				"description": "¡El clásico juego de adivinar palabras! Un jugador piensa en una palabra y los demás intentan adivinarla letra por letra.",
 				"tag": "Juego de Fiesta"
+			},
+			"impostor": {
+				"title": "Impostor",
+				"description": "¡Encuentra al impostor! Todos reciben una palabra secreta excepto el impostor. Descríbela sin revelársela mientras detectas quién está fingiendo.",
+				"tag": "Multijugador"
 			}
 		}
 	},
@@ -147,6 +152,81 @@
 			"nextRound": "Siguiente Ronda",
 			"resetGame": "Reiniciar Todo el Juego",
 			"resetConfirm": "¿Estás seguro de que quieres reiniciar todo el juego? Se perderán todas las puntuaciones."
+		}
+	},
+	"impostor": {
+		"title": "Impostor",
+		"subtitle": "Encuentra al impostor entre tus amigos",
+		"connecting": "Conectando...",
+		"errors": {
+			"enterName": "Por favor ingresa tu nombre",
+			"enterRoomCode": "Por favor ingresa el código de sala",
+			"connectionFailed": "Error al conectar. Verifica que el servidor esté activo.",
+			"kicked": "Has sido expulsado de la sala"
+		},
+		"home": {
+			"yourName": "Tu nombre",
+			"namePlaceholder": "Ingresa tu nombre",
+			"createRoom": "Crear Sala",
+			"or": "o",
+			"roomCodePlaceholder": "ABCD",
+			"joinRoom": "Unirse"
+		},
+		"lobby": {
+			"title": "Sala de Espera",
+			"roomCode": "Código de Sala",
+			"tapToCopy": "Toca para copiar",
+			"players": "Jugadores",
+			"host": "Anfitrión",
+			"you": "Tú",
+			"disconnected": "Desconectado",
+			"kick": "Expulsar",
+			"settings": "Configuración",
+			"impostorCount": "Número de Impostores",
+			"category": "Categoría",
+			"customWords": "Palabras Personalizadas",
+			"customWordsPlaceholder": "pizza, playa, doctor...",
+			"add": "Agregar",
+			"clearAll": "Limpiar todo",
+			"customWordsActive": "Las palabras personalizadas reemplazarán la categoría seleccionada",
+			"startGame": "Iniciar Juego",
+			"needMorePlayers": "Se necesitan 3+ jugadores",
+			"waitingForHost": "Esperando a que el anfitrión inicie el juego..."
+		},
+		"categories": {
+			"animals": "Animales",
+			"food": "Comida",
+			"places": "Lugares",
+			"objects": "Objetos",
+			"professions": "Profesiones"
+		},
+		"playing": {
+			"tapToReveal": "Toca el botón para ver tu rol",
+			"showRole": "Ver Mi Rol",
+			"hideRole": "Ocultar Rol",
+			"youAreImpostor": "¡Eres el Impostor!",
+			"youAreCitizen": "Eres Ciudadano",
+			"impostorHint": "No sabes la palabra. ¡Finge que la conoces!",
+			"secretWord": "Palabra Secreta",
+			"playersCount": "{count} jugadores en la partida",
+			"impostorsCount": "{count} impostor(es)",
+			"hostControls": "Controles del Anfitrión",
+			"impostorsWin": "Gana el Impostor",
+			"citizensWin": "Ganan los Ciudadanos"
+		},
+		"voting": {
+			"title": "Votación",
+			"instruction": "¿Quién crees que es el impostor?",
+			"votesCount": "{current} de {total} votos"
+		},
+		"results": {
+			"impostorsWon": "¡Ganó el Impostor!",
+			"citizensWon": "¡Ganaron los Ciudadanos!",
+			"secretWord": "La palabra era",
+			"impostorsWere": "El impostor era",
+			"votes": "Votos",
+			"playAgain": "Jugar Otra Vez",
+			"waitingForHost": "Esperando a que el anfitrión inicie otra ronda..."
 		}
 	}
 }

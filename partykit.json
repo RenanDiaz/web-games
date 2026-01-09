@@ -1,0 +1,6 @@
+{
+  "$schema": "https://www.partykit.io/schema.json",
+  "name": "web-games-impostor",
+  "main": "party/impostor.ts",
+  "compatibilityDate": "2024-01-01"
+}

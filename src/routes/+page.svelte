@@ -13,6 +13,13 @@
 
 	const games: Game[] = [
 		{
+			slug: 'impostor',
+			icon: '🕵️',
+			titleKey: 'home.games.impostor.title',
+			descriptionKey: 'home.games.impostor.description',
+			tagKey: 'home.games.impostor.tag'
+		},
+		{
 			slug: 'among-us-party',
 			icon: '🎭',
 			titleKey: 'home.games.amongUs.title',
