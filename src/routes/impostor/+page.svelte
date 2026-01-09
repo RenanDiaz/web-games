@@ -46,8 +46,22 @@
 
 	// Constants
 	const PARTYKIT_HOST = PUBLIC_PARTYKIT_HOST || 'localhost:1999';
+	const PLAYER_ID_KEY = 'impostor_player_id';
+	const SESSION_ROOM_KEY = 'impostor_session_room';
 
 	const CATEGORIES = ['animals', 'food', 'places', 'objects', 'professions'];
+
+	// Generate or retrieve persistent player ID
+	function getOrCreatePlayerId(): string {
+		if (!browser) return '';
+		let playerId = localStorage.getItem(PLAYER_ID_KEY);
+		if (!playerId) {
+			// Generate a unique ID (UUID-like)
+			playerId = 'p_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+			localStorage.setItem(PLAYER_ID_KEY, playerId);
+		}
+		return playerId;
+	}
 
 	// State
 	let screen: Screen = $state('home');
@@ -92,6 +106,13 @@
 				joinRoomCode = roomParam.toUpperCase();
 				// Clean up the URL without reloading
 				window.history.replaceState({}, '', '/impostor');
+			}
+
+			// Try to reconnect to previous session
+			const savedRoom = sessionStorage.getItem(SESSION_ROOM_KEY);
+			if (savedRoom && savedName) {
+				roomCode = savedRoom;
+				connectToRoom(savedRoom);
 			}
 		}
 	});
@@ -141,6 +162,8 @@
 	function connectToRoom(code: string) {
 		if (browser) {
 			localStorage.setItem('impostor_player_name', playerName.trim());
+			// Save room code for reconnection
+			sessionStorage.setItem(SESSION_ROOM_KEY, code.toUpperCase());
 		}
 
 		connectionStatus = 'connecting';
@@ -154,8 +177,9 @@
 
 		socket.addEventListener('open', () => {
 			connectionStatus = 'connected';
-			// Join the room with our name
-			socket?.send(JSON.stringify({ type: 'join', name: playerName.trim() }));
+			// Join the room with our name and persistent player ID
+			const playerId = getOrCreatePlayerId();
+			socket?.send(JSON.stringify({ type: 'join', name: playerName.trim(), playerId }));
 		});
 
 		socket.addEventListener('message', (event) => {
@@ -224,6 +248,10 @@
 		roomCode = '';
 		selectedVote = null;
 		showRole = false;
+		// Clear session data
+		if (browser) {
+			sessionStorage.removeItem(SESSION_ROOM_KEY);
+		}
 	}
 
 	// Game actions
