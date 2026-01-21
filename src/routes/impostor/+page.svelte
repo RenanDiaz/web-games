@@ -112,6 +112,7 @@
 	let customWordsInput = $state('');
 	let connectionStatus = $state<'connecting' | 'connected' | 'disconnected'>('disconnected');
 	let clueInput = $state('');
+	let hasRoomFromUrl = $state(false);
 
 	// Derived helpers
 	function getIsHost(): boolean {
@@ -141,6 +142,7 @@
 			const roomParam = urlParams.get('room');
 			if (roomParam) {
 				joinRoomCode = roomParam.toUpperCase();
+				hasRoomFromUrl = true;
 				// Clean up the URL without reloading
 				window.history.replaceState({}, '', '/impostor');
 			}
@@ -450,6 +452,11 @@
 	function getPlayerName(playerId: string): string {
 		return gameState?.players.find((p) => p.id === playerId)?.name ?? playerId;
 	}
+
+	function cancelJoinFromUrl() {
+		hasRoomFromUrl = false;
+		joinRoomCode = '';
+	}
 </script>
 
 <svelte:head>
@@ -467,39 +474,70 @@
 				<div class="error-message">{errorMessage}</div>
 			{/if}
 
-			<div class="form-group">
-				<label for="playerName">{$_('impostor.home.yourName')}</label>
-				<input
-					type="text"
-					id="playerName"
-					bind:value={playerName}
-					placeholder={$_('impostor.home.namePlaceholder')}
-					maxlength="20"
-				/>
-			</div>
+			{#if hasRoomFromUrl}
+				<!-- Joining from shared link -->
+				<div class="join-from-link">
+					<div class="join-room-code-display">
+						<span class="label">{$_('impostor.home.joiningRoom')}</span>
+						<span class="code">{joinRoomCode}</span>
+					</div>
 
-			<div class="home-actions">
-				<button class="btn primary large" onclick={createRoom}>
-					{$_('impostor.home.createRoom')}
-				</button>
+					<div class="form-group">
+						<label for="playerName">{$_('impostor.home.yourName')}</label>
+						<input
+							type="text"
+							id="playerName"
+							bind:value={playerName}
+							placeholder={$_('impostor.home.namePlaceholder')}
+							maxlength="20"
+							onkeypress={(e) => e.key === 'Enter' && joinRoom()}
+						/>
+					</div>
 
-				<div class="divider">
-					<span>{$_('impostor.home.or')}</span>
-				</div>
-
-				<div class="join-section">
-					<input
-						type="text"
-						bind:value={joinRoomCode}
-						placeholder={$_('impostor.home.roomCodePlaceholder')}
-						maxlength="4"
-						class="room-code-input"
-					/>
-					<button class="btn secondary" onclick={joinRoom}>
+					<button class="btn primary large" onclick={joinRoom}>
 						{$_('impostor.home.joinRoom')}
 					</button>
+
+					<button class="btn-link cancel-link" onclick={cancelJoinFromUrl}>
+						{$_('impostor.home.createInstead')}
+					</button>
 				</div>
-			</div>
+			{:else}
+				<!-- Normal home screen -->
+				<div class="form-group">
+					<label for="playerName">{$_('impostor.home.yourName')}</label>
+					<input
+						type="text"
+						id="playerName"
+						bind:value={playerName}
+						placeholder={$_('impostor.home.namePlaceholder')}
+						maxlength="20"
+					/>
+				</div>
+
+				<div class="home-actions">
+					<button class="btn primary large" onclick={createRoom}>
+						{$_('impostor.home.createRoom')}
+					</button>
+
+					<div class="divider">
+						<span>{$_('impostor.home.or')}</span>
+					</div>
+
+					<div class="join-section">
+						<input
+							type="text"
+							bind:value={joinRoomCode}
+							placeholder={$_('impostor.home.roomCodePlaceholder')}
+							maxlength="4"
+							class="room-code-input"
+						/>
+						<button class="btn secondary" onclick={joinRoom}>
+							{$_('impostor.home.joinRoom')}
+						</button>
+					</div>
+				</div>
+			{/if}
 		</div>
 	{:else if screen === 'lobby'}
 		<!-- Lobby Screen -->
@@ -1283,6 +1321,41 @@
 		text-align: center;
 		font-size: 1.2rem;
 		letter-spacing: 0.2em;
+	}
+
+	/* Join from Link Screen */
+	.join-from-link {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+
+	.join-room-code-display {
+		background: linear-gradient(135deg, #1f2937, #374151);
+		border: 2px solid #6366f1;
+		border-radius: 12px;
+		padding: 1.5rem;
+		text-align: center;
+	}
+
+	.join-room-code-display .label {
+		display: block;
+		font-size: 0.9rem;
+		color: #9ca3af;
+		margin-bottom: 0.5rem;
+	}
+
+	.join-room-code-display .code {
+		display: block;
+		font-size: 2.5rem;
+		font-weight: 700;
+		letter-spacing: 0.3em;
+		color: #6366f1;
+	}
+
+	.cancel-link {
+		text-align: center;
+		margin-top: 0.5rem;
 	}
 
 	/* Lobby Screen */

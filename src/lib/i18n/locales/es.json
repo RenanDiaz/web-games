@@ -170,7 +170,9 @@
 			"createRoom": "Crear Sala",
 			"or": "o",
 			"roomCodePlaceholder": "ABCD",
-			"joinRoom": "Unirse"
+			"joinRoom": "Unirse",
+			"joiningRoom": "Uniéndose a la sala",
+			"createInstead": "Crear una sala nueva en su lugar"
 		},
 		"lobby": {
 			"title": "Sala de Espera",
