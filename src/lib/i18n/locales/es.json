@@ -185,15 +185,16 @@
 			"kick": "Expulsar",
 			"settings": "Configuración",
 			"impostorCount": "Número de Impostores",
+			"totalRounds": "Número de Rondas",
 			"category": "Categoría",
 			"customWords": "Palabras Personalizadas",
 			"customWordsPlaceholder": "pizza, playa, doctor...",
 			"add": "Agregar",
 			"clearAll": "Limpiar todo",
 			"customWordsActive": "Las palabras personalizadas reemplazarán la categoría seleccionada",
-			"startGame": "Iniciar Juego",
+			"startGame": "Iniciar Partida",
 			"needMorePlayers": "Se necesitan 3+ jugadores",
-			"waitingForHost": "Esperando a que el anfitrión inicie el juego..."
+			"waitingForHost": "Esperando a que el anfitrión inicie la partida..."
 		},
 		"categories": {
 			"animals": "Animales",
@@ -203,6 +204,7 @@
 			"professions": "Profesiones"
 		},
 		"playing": {
+			"round": "Ronda {current} de {total}",
 			"tapToReveal": "Toca el botón para ver tu rol",
 			"showRole": "Ver Mi Rol",
 			"hideRole": "Ocultar Rol",
@@ -218,17 +220,34 @@
 		},
 		"voting": {
 			"title": "Votación",
-			"instruction": "¿Quién crees que es el impostor?",
-			"votesCount": "{current} de {total} votos"
+			"instruction": "¿Quién crees que es el impostor? Puedes cambiar tu voto.",
+			"votesCount": "{current} de {total} votos",
+			"tieWarning": "¡Hay un empate! Cambien sus votos para desempatar.",
+			"currentVotes": "Votos actuales",
+			"notVotedYet": "Sin votar"
 		},
 		"results": {
 			"impostorsWon": "¡Ganó el Impostor!",
 			"citizensWon": "¡Ganaron los Ciudadanos!",
 			"secretWord": "La palabra era",
 			"impostorsWere": "El impostor era",
+			"eliminated": "Eliminado",
 			"votes": "Votos",
+			"pointsThisRound": "Puntos esta ronda",
 			"playAgain": "Jugar Otra Vez",
 			"waitingForHost": "Esperando a que el anfitrión inicie otra ronda..."
+		},
+		"leaderboard": {
+			"title": "Clasificación",
+			"roundProgress": "Ronda {current} de {total} completada",
+			"nextRound": "Siguiente Ronda",
+			"waitingForHost": "Esperando a que el anfitrión inicie la siguiente ronda..."
+		},
+		"podium": {
+			"title": "¡Partida Terminada!",
+			"finalStandings": "Clasificación Final",
+			"playAgain": "Nueva Partida",
+			"waitingForHost": "Esperando a que el anfitrión inicie una nueva partida..."
 		}
 	}
 }

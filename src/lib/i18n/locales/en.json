@@ -185,15 +185,16 @@
 			"kick": "Kick",
 			"settings": "Settings",
 			"impostorCount": "Number of Impostors",
+			"totalRounds": "Number of Rounds",
 			"category": "Category",
 			"customWords": "Custom Words",
 			"customWordsPlaceholder": "pizza, beach, doctor...",
 			"add": "Add",
 			"clearAll": "Clear all",
 			"customWordsActive": "Custom words will replace the selected category",
-			"startGame": "Start Game",
+			"startGame": "Start Match",
 			"needMorePlayers": "Need 3+ players",
-			"waitingForHost": "Waiting for host to start the game..."
+			"waitingForHost": "Waiting for host to start the match..."
 		},
 		"categories": {
 			"animals": "Animals",
@@ -203,6 +204,7 @@
 			"professions": "Professions"
 		},
 		"playing": {
+			"round": "Round {current} of {total}",
 			"tapToReveal": "Tap the button to see your role",
 			"showRole": "Show My Role",
 			"hideRole": "Hide Role",
@@ -218,17 +220,34 @@
 		},
 		"voting": {
 			"title": "Voting",
-			"instruction": "Who do you think is the impostor?",
-			"votesCount": "{current} of {total} votes"
+			"instruction": "Who do you think is the impostor? You can change your vote.",
+			"votesCount": "{current} of {total} votes",
+			"tieWarning": "There's a tie! Change your votes to break the tie.",
+			"currentVotes": "Current votes",
+			"notVotedYet": "Not voted"
 		},
 		"results": {
 			"impostorsWon": "Impostor Won!",
 			"citizensWon": "Citizens Won!",
 			"secretWord": "The word was",
 			"impostorsWere": "The impostor was",
+			"eliminated": "Eliminated",
 			"votes": "Votes",
+			"pointsThisRound": "Points this round",
 			"playAgain": "Play Again",
 			"waitingForHost": "Waiting for host to start another round..."
+		},
+		"leaderboard": {
+			"title": "Leaderboard",
+			"roundProgress": "Round {current} of {total} completed",
+			"nextRound": "Next Round",
+			"waitingForHost": "Waiting for host to start the next round..."
+		},
+		"podium": {
+			"title": "Match Complete!",
+			"finalStandings": "Final Standings",
+			"playAgain": "New Match",
+			"waitingForHost": "Waiting for host to start a new match..."
 		}
 	}
 }

@@ -6,7 +6,7 @@
 	import PartySocket from 'partysocket';
 
 	// Types
-	type Screen = 'home' | 'lobby' | 'playing' | 'voting' | 'results';
+	type Screen = 'home' | 'lobby' | 'playing' | 'leaderboard' | 'podium';
 
 	interface Player {
 		id: string;
@@ -15,26 +15,46 @@
 		isConnected: boolean;
 	}
 
+	interface PublicVoteInfo {
+		odplayerId: string;
+		odplayerName: string;
+		votedForId: string | null;
+		votedForName: string | null;
+	}
+
+	interface RoundResult {
+		roundNumber: number;
+		word: string;
+		impostorIds: string[];
+		votes: Record<string, string>;
+		eliminatedId: string | null;
+		impostorsWon: boolean;
+		pointsAwarded: Record<string, number>;
+	}
+
 	interface PublicGameState {
-		phase: 'lobby' | 'playing' | 'voting' | 'results';
+		phase: 'lobby' | 'playing' | 'results' | 'leaderboard' | 'podium';
 		players: Player[];
 		hostId: string | null;
 		settings: {
 			impostorCount: number;
 			category: string;
 			customWords: string[];
+			totalRounds: number;
 		};
+		match: {
+			currentRound: number;
+			totalRounds: number;
+			scores: Record<string, { name: string; score: number }>;
+		} | null;
 		currentRound: {
 			hasVoted: boolean;
+			myVote: string | null;
+			votes: PublicVoteInfo[];
 			voteCount: number;
 			totalPlayers: number;
 		} | null;
-		lastResult: {
-			word: string;
-			impostorIds: string[];
-			impostorsWon: boolean;
-			votes: Record<string, string>;
-		} | null;
+		lastResult: RoundResult | null;
 		myId: string;
 	}
 
@@ -92,6 +112,7 @@
 	const isHost = $derived(getIsHost());
 	const connectedPlayers = $derived(getConnectedPlayers());
 	const canStart = $derived(connectedPlayers.length >= 3);
+	const sortedLeaderboard = $derived(getSortedLeaderboard());
 
 	// Lifecycle
 	onMount(() => {
@@ -226,15 +247,17 @@
 			case 'lobby':
 				screen = 'lobby';
 				myRole = null;
+				selectedVote = null;
 				break;
 			case 'playing':
 				screen = 'playing';
 				break;
-			case 'voting':
-				screen = 'voting';
-				break;
 			case 'results':
-				screen = 'results';
+			case 'leaderboard':
+				screen = 'leaderboard';
+				break;
+			case 'podium':
+				screen = 'podium';
 				break;
 		}
 	}
@@ -268,12 +291,58 @@
 		socket?.send(JSON.stringify({ type: 'vote', targetId }));
 	}
 
-	function endRound(impostorsWon: boolean) {
-		socket?.send(JSON.stringify({ type: 'end-round', impostorsWon }));
+	function nextRound() {
+		socket?.send(JSON.stringify({ type: 'next-round' }));
 	}
 
 	function backToLobby() {
+		selectedVote = null;
 		socket?.send(JSON.stringify({ type: 'back-to-lobby' }));
+	}
+
+	// Helper to check if there's a vote tie
+	function checkForTie(): { isTie: boolean; tiedPlayers: string[] } {
+		if (!gameState?.currentRound) return { isTie: false, tiedPlayers: [] };
+
+		const votes = gameState.currentRound.votes;
+		const voteCount = gameState.currentRound.voteCount;
+		const totalPlayers = gameState.currentRound.totalPlayers;
+
+		// Only check for tie if all players have voted
+		if (voteCount < totalPlayers) return { isTie: false, tiedPlayers: [] };
+
+		// Count votes for each player
+		const voteCounts: Record<string, number> = {};
+		for (const vote of votes) {
+			if (vote.votedForId) {
+				voteCounts[vote.votedForId] = (voteCounts[vote.votedForId] || 0) + 1;
+			}
+		}
+
+		// Find max votes
+		const maxVotes = Math.max(...Object.values(voteCounts), 0);
+		const playersWithMaxVotes = Object.entries(voteCounts)
+			.filter(([_, count]) => count === maxVotes)
+			.map(([playerId]) => playerId);
+
+		return {
+			isTie: playersWithMaxVotes.length > 1,
+			tiedPlayers: playersWithMaxVotes
+		};
+	}
+
+	// Helper to get vote counts for display
+	function getVoteCountsForPlayer(playerId: string): number {
+		if (!gameState?.currentRound) return 0;
+		return gameState.currentRound.votes.filter(v => v.votedForId === playerId).length;
+	}
+
+	// Get sorted leaderboard
+	function getSortedLeaderboard(): { playerId: string; name: string; score: number }[] {
+		if (!gameState?.match?.scores) return [];
+		return Object.entries(gameState.match.scores)
+			.map(([playerId, data]) => ({ playerId, name: data.name, score: data.score }))
+			.sort((a, b) => b.score - a.score);
 	}
 
 	function kickPlayer(playerId: string) {
@@ -471,6 +540,20 @@
 					</div>
 
 					<div class="setting-row">
+						<label for="totalRounds">{$_('impostor.lobby.totalRounds')}</label>
+						<select
+							id="totalRounds"
+							value={gameState?.settings.totalRounds}
+							onchange={(e) => updateSettings({ totalRounds: parseInt(e.currentTarget.value) })}
+						>
+							<option value="3">3</option>
+							<option value="5">5</option>
+							<option value="7">7</option>
+							<option value="10">10</option>
+						</select>
+					</div>
+
+					<div class="setting-row">
 						<label for="category">{$_('impostor.lobby.category')}</label>
 						<select
 							id="category"
@@ -526,6 +609,13 @@
 	{:else if screen === 'playing'}
 		<!-- Playing Screen -->
 		<div class="playing-screen">
+			<!-- Round indicator -->
+			{#if gameState?.match}
+				<div class="round-indicator">
+					{$_('impostor.playing.round', { values: { current: gameState.match.currentRound, total: gameState.match.totalRounds } })}
+				</div>
+			{/if}
+
 			<div class="role-card" class:impostor={myRole?.isImpostor} class:revealed={showRole}>
 				{#if !showRole}
 					<div class="role-hidden">
@@ -564,116 +654,216 @@
 				</p>
 			</div>
 
-			{#if isHost}
-				<div class="host-controls">
-					<h3>{$_('impostor.playing.hostControls')}</h3>
-					<div class="end-round-buttons">
-						<button class="btn danger" onclick={() => endRound(true)}>
-							{$_('impostor.playing.impostorsWin')}
-						</button>
-						<button class="btn success" onclick={() => endRound(false)}>
-							{$_('impostor.playing.citizensWin')}
-						</button>
-					</div>
+			<!-- Voting section during play -->
+			<div class="voting-section">
+				<h3>{$_('impostor.voting.title')}</h3>
+				<p class="voting-instruction">{$_('impostor.voting.instruction')}</p>
+
+				<div class="vote-status">
+					{$_('impostor.voting.votesCount', {
+						values: {
+							current: gameState?.currentRound?.voteCount ?? 0,
+							total: gameState?.currentRound?.totalPlayers ?? 0
+						}
+					})}
 				</div>
-			{/if}
-		</div>
-	{:else if screen === 'voting'}
-		<!-- Voting Screen -->
-		<div class="voting-screen">
-			<h1>{$_('impostor.voting.title')}</h1>
-			<p class="voting-instruction">{$_('impostor.voting.instruction')}</p>
 
-			<div class="vote-status">
-				{$_('impostor.voting.votesCount', {
-					values: {
-						current: gameState?.currentRound?.voteCount ?? 0,
-						total: gameState?.currentRound?.totalPlayers ?? 0
-					}
-				})}
-			</div>
-
-			<ul class="voting-list">
-				{#each connectedPlayers.filter((p) => p.id !== gameState?.myId) as player}
-					<li>
-						<button
-							class="vote-btn"
-							class:selected={selectedVote === player.id}
-							class:voted={gameState?.currentRound?.hasVoted}
-							onclick={() => vote(player.id)}
-							disabled={gameState?.currentRound?.hasVoted}
-						>
-							{player.name}
-							{#if selectedVote === player.id}
-								<span class="vote-check">&#10004;</span>
-							{/if}
-						</button>
-					</li>
-				{/each}
-			</ul>
-
-			{#if isHost}
-				<div class="host-controls">
-					<h3>{$_('impostor.playing.hostControls')}</h3>
-					<div class="end-round-buttons">
-						<button class="btn danger" onclick={() => endRound(true)}>
-							{$_('impostor.playing.impostorsWin')}
-						</button>
-						<button class="btn success" onclick={() => endRound(false)}>
-							{$_('impostor.playing.citizensWin')}
-						</button>
+				{#if checkForTie().isTie}
+					<div class="tie-warning">
+						{$_('impostor.voting.tieWarning')}
 					</div>
-				</div>
-			{/if}
-		</div>
-	{:else if screen === 'results'}
-		<!-- Results Screen -->
-		<div class="results-screen">
-			<h1>
-				{#if gameState?.lastResult?.impostorsWon}
-					{$_('impostor.results.impostorsWon')}
-				{:else}
-					{$_('impostor.results.citizensWon')}
 				{/if}
-			</h1>
 
-			<div class="result-details">
-				<div class="result-item">
-					<span class="label">{$_('impostor.results.secretWord')}</span>
-					<span class="value">{gameState?.lastResult?.word}</span>
-				</div>
+				<ul class="voting-list">
+					{#each connectedPlayers.filter((p) => p.id !== gameState?.myId) as player}
+						{@const voteCount = getVoteCountsForPlayer(player.id)}
+						{@const tieInfo = checkForTie()}
+						{@const isTied = tieInfo.isTie && tieInfo.tiedPlayers.includes(player.id)}
+						<li>
+							<button
+								class="vote-btn"
+								class:selected={gameState?.currentRound?.myVote === player.id}
+								class:tied={isTied}
+								onclick={() => vote(player.id)}
+							>
+								<span class="player-vote-name">{player.name}</span>
+								<span class="vote-count-badge" class:has-votes={voteCount > 0}>
+									{voteCount}
+								</span>
+							</button>
+						</li>
+					{/each}
+				</ul>
 
-				<div class="result-item">
-					<span class="label">{$_('impostor.results.impostorsWere')}</span>
-					<span class="value impostors">
-						{gameState?.lastResult?.impostorIds.map(getPlayerName).join(', ')}
-					</span>
-				</div>
+				<!-- Show who voted for whom -->
+				{#if (gameState?.currentRound?.voteCount ?? 0) > 0}
+					<div class="live-votes">
+						<h4>{$_('impostor.voting.currentVotes')}</h4>
+						<ul class="votes-list">
+							{#each gameState?.currentRound?.votes ?? [] as vote}
+								{#if vote.votedForId}
+									<li>
+										<span class="voter">{vote.odplayerName}</span>
+										<span class="arrow">&rarr;</span>
+										<span class="voted">{vote.votedForName}</span>
+									</li>
+								{:else}
+									<li class="not-voted">
+										<span class="voter">{vote.odplayerName}</span>
+										<span class="pending">{$_('impostor.voting.notVotedYet')}</span>
+									</li>
+								{/if}
+							{/each}
+						</ul>
+					</div>
+				{/if}
 			</div>
+		</div>
+	{:else if screen === 'leaderboard'}
+		<!-- Leaderboard Screen (between rounds) -->
+		<div class="leaderboard-screen">
+			{#if gameState?.lastResult}
+				<!-- Round result header -->
+				<div class="round-result-header">
+					<h1>
+						{#if gameState.lastResult.impostorsWon}
+							{$_('impostor.results.impostorsWon')}
+						{:else}
+							{$_('impostor.results.citizensWon')}
+						{/if}
+					</h1>
 
-			{#if Object.keys(gameState?.lastResult?.votes ?? {}).length > 0}
-				<div class="votes-summary">
-					<h3>{$_('impostor.results.votes')}</h3>
-					<ul>
-						{#each Object.entries(gameState?.lastResult?.votes ?? {}) as [voterId, votedId]}
-							<li>
-								<span class="voter">{getPlayerName(voterId)}</span>
-								<span class="arrow">&rarr;</span>
-								<span class="voted">{getPlayerName(votedId)}</span>
-							</li>
-						{/each}
-					</ul>
+					<div class="result-details">
+						<div class="result-item">
+							<span class="label">{$_('impostor.results.secretWord')}</span>
+							<span class="value">{gameState.lastResult.word}</span>
+						</div>
+
+						<div class="result-item">
+							<span class="label">{$_('impostor.results.impostorsWere')}</span>
+							<span class="value impostors">
+								{gameState.lastResult.impostorIds.map(getPlayerName).join(', ')}
+							</span>
+						</div>
+
+						{#if gameState.lastResult.eliminatedId}
+							<div class="result-item">
+								<span class="label">{$_('impostor.results.eliminated')}</span>
+								<span class="value eliminated">
+									{getPlayerName(gameState.lastResult.eliminatedId)}
+								</span>
+							</div>
+						{/if}
+					</div>
+
+					<!-- Points awarded this round -->
+					<div class="points-awarded">
+						<h3>{$_('impostor.results.pointsThisRound')}</h3>
+						<ul>
+							{#each Object.entries(gameState.lastResult.pointsAwarded) as [playerId, points]}
+								<li class:positive={points > 0}>
+									<span class="player-name">{getPlayerName(playerId)}</span>
+									<span class="points">+{points}</span>
+								</li>
+							{/each}
+						</ul>
+					</div>
 				</div>
 			{/if}
 
+			<!-- Leaderboard -->
+			<div class="leaderboard">
+				<h2>{$_('impostor.leaderboard.title')}</h2>
+				{#if gameState?.match}
+					<p class="round-progress">
+						{$_('impostor.leaderboard.roundProgress', {
+							values: {
+								current: gameState.match.currentRound,
+								total: gameState.match.totalRounds
+							}
+						})}
+					</p>
+				{/if}
+
+				<ol class="leaderboard-list">
+					{#each getSortedLeaderboard() as entry, index}
+						<li class:first={index === 0} class:second={index === 1} class:third={index === 2} class:is-me={entry.playerId === gameState?.myId}>
+							<span class="position">{index + 1}</span>
+							<span class="name">{entry.name}</span>
+							<span class="score">{entry.score} pts</span>
+						</li>
+					{/each}
+				</ol>
+			</div>
+
 			{#if isHost}
-				<div class="result-actions">
-					<button class="btn primary large" onclick={backToLobby}>
-						{$_('impostor.results.playAgain')}
+				<div class="leaderboard-actions">
+					<button class="btn primary large" onclick={nextRound}>
+						{$_('impostor.leaderboard.nextRound')}
 					</button>
 				</div>
 			{:else}
-				<p class="waiting-message">{$_('impostor.results.waitingForHost')}</p>
+				<p class="waiting-message">{$_('impostor.leaderboard.waitingForHost')}</p>
+			{/if}
+		</div>
+	{:else if screen === 'podium'}
+		<!-- Podium Screen (end of match) -->
+		<div class="podium-screen">
+			<h1>{$_('impostor.podium.title')}</h1>
+
+			<!-- Podium display -->
+			<div class="podium">
+				{#if sortedLeaderboard.length >= 2}
+					<div class="podium-place second">
+						<div class="player-avatar">2</div>
+						<div class="player-name">{sortedLeaderboard[1].name}</div>
+						<div class="player-score">{sortedLeaderboard[1].score} pts</div>
+						<div class="podium-block"></div>
+					</div>
+				{/if}
+
+				{#if sortedLeaderboard.length >= 1}
+					<div class="podium-place first">
+						<div class="crown">&#128081;</div>
+						<div class="player-avatar">1</div>
+						<div class="player-name">{sortedLeaderboard[0].name}</div>
+						<div class="player-score">{sortedLeaderboard[0].score} pts</div>
+						<div class="podium-block"></div>
+					</div>
+				{/if}
+
+				{#if sortedLeaderboard.length >= 3}
+					<div class="podium-place third">
+						<div class="player-avatar">3</div>
+						<div class="player-name">{sortedLeaderboard[2].name}</div>
+						<div class="player-score">{sortedLeaderboard[2].score} pts</div>
+						<div class="podium-block"></div>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Full standings -->
+			<div class="full-standings">
+				<h3>{$_('impostor.podium.finalStandings')}</h3>
+				<ol class="standings-list">
+					{#each sortedLeaderboard as entry, index}
+						<li class:is-me={entry.playerId === gameState?.myId}>
+							<span class="position">{index + 1}</span>
+							<span class="name">{entry.name}</span>
+							<span class="score">{entry.score} pts</span>
+						</li>
+					{/each}
+				</ol>
+			</div>
+
+			{#if isHost}
+				<div class="podium-actions">
+					<button class="btn primary large" onclick={backToLobby}>
+						{$_('impostor.podium.playAgain')}
+					</button>
+				</div>
+			{:else}
+				<p class="waiting-message">{$_('impostor.podium.waitingForHost')}</p>
 			{/if}
 		</div>
 	{/if}
@@ -1419,10 +1609,445 @@
 		}
 	}
 
+	/* Round indicator */
+	.round-indicator {
+		text-align: center;
+		background: #374151;
+		padding: 0.5rem 1rem;
+		border-radius: 20px;
+		font-size: 0.9rem;
+		font-weight: 600;
+		margin-bottom: 1rem;
+	}
+
+	/* Voting section in playing screen */
+	.voting-section {
+		background: #1f2937;
+		border-radius: 12px;
+		padding: 1rem;
+		width: 100%;
+		margin-top: 1rem;
+	}
+
+	.voting-section h3 {
+		margin: 0 0 0.5rem 0;
+		font-size: 1.1rem;
+	}
+
+	.tie-warning {
+		background: #f59e0b;
+		color: black;
+		padding: 0.75rem;
+		border-radius: 8px;
+		text-align: center;
+		font-weight: 600;
+		margin-bottom: 1rem;
+	}
+
+	.vote-btn {
+		width: 100%;
+		padding: 1rem;
+		background: #1f2937;
+		border: 2px solid #374151;
+		border-radius: 8px;
+		color: white;
+		font-size: 1rem;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		transition: all 0.2s;
+	}
+
+	.vote-btn:hover {
+		border-color: #6366f1;
+	}
+
+	.vote-btn.selected {
+		background: #6366f1;
+		border-color: #6366f1;
+	}
+
+	.vote-btn.tied {
+		border-color: #f59e0b;
+		animation: pulse 1s infinite;
+	}
+
+	@keyframes pulse {
+		0%, 100% { border-color: #f59e0b; }
+		50% { border-color: #fbbf24; }
+	}
+
+	.player-vote-name {
+		flex: 1;
+		text-align: left;
+	}
+
+	.vote-count-badge {
+		background: #374151;
+		padding: 0.25rem 0.75rem;
+		border-radius: 12px;
+		font-size: 0.85rem;
+		font-weight: 600;
+		min-width: 2rem;
+		text-align: center;
+	}
+
+	.vote-count-badge.has-votes {
+		background: #6366f1;
+	}
+
+	.live-votes {
+		margin-top: 1rem;
+		padding-top: 1rem;
+		border-top: 1px solid #374151;
+	}
+
+	.live-votes h4 {
+		font-size: 0.9rem;
+		color: #888;
+		margin-bottom: 0.5rem;
+	}
+
+	.votes-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	.votes-list li {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.4rem 0;
+		font-size: 0.9rem;
+	}
+
+	.votes-list li.not-voted {
+		opacity: 0.5;
+	}
+
+	.votes-list .voter {
+		flex: 1;
+	}
+
+	.votes-list .arrow {
+		color: #666;
+	}
+
+	.votes-list .voted {
+		flex: 1;
+		text-align: right;
+		color: #6366f1;
+	}
+
+	.votes-list .pending {
+		flex: 1;
+		text-align: right;
+		color: #888;
+		font-style: italic;
+	}
+
+	/* Leaderboard Screen */
+	.leaderboard-screen {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.round-result-header {
+		text-align: center;
+		margin-bottom: 1.5rem;
+	}
+
+	.round-result-header h1 {
+		font-size: 1.5rem;
+		margin-bottom: 1rem;
+	}
+
+	.points-awarded {
+		background: #1f2937;
+		border-radius: 12px;
+		padding: 1rem;
+		margin-top: 1rem;
+	}
+
+	.points-awarded h3 {
+		font-size: 0.9rem;
+		color: #888;
+		margin-bottom: 0.75rem;
+	}
+
+	.points-awarded ul {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	.points-awarded li {
+		display: flex;
+		justify-content: space-between;
+		padding: 0.4rem 0;
+		border-bottom: 1px solid #374151;
+	}
+
+	.points-awarded li:last-child {
+		border-bottom: none;
+	}
+
+	.points-awarded li.positive .points {
+		color: #22c55e;
+		font-weight: 600;
+	}
+
+	.leaderboard {
+		background: #1f2937;
+		border-radius: 12px;
+		padding: 1rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.leaderboard h2 {
+		text-align: center;
+		margin-bottom: 0.5rem;
+	}
+
+	.round-progress {
+		text-align: center;
+		color: #888;
+		font-size: 0.9rem;
+		margin-bottom: 1rem;
+	}
+
+	.leaderboard-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		counter-reset: leaderboard;
+	}
+
+	.leaderboard-list li {
+		display: flex;
+		align-items: center;
+		padding: 0.75rem;
+		border-radius: 8px;
+		margin-bottom: 0.5rem;
+		background: #374151;
+	}
+
+	.leaderboard-list li.first {
+		background: linear-gradient(135deg, #fbbf24, #f59e0b);
+		color: black;
+	}
+
+	.leaderboard-list li.second {
+		background: linear-gradient(135deg, #9ca3af, #6b7280);
+		color: black;
+	}
+
+	.leaderboard-list li.third {
+		background: linear-gradient(135deg, #d97706, #b45309);
+		color: white;
+	}
+
+	.leaderboard-list li.is-me {
+		border: 2px solid #6366f1;
+	}
+
+	.leaderboard-list .position {
+		width: 30px;
+		font-weight: 700;
+		font-size: 1.1rem;
+	}
+
+	.leaderboard-list .name {
+		flex: 1;
+		font-weight: 500;
+	}
+
+	.leaderboard-list .score {
+		font-weight: 700;
+	}
+
+	.leaderboard-actions {
+		margin-top: auto;
+	}
+
+	.leaderboard-actions .btn {
+		width: 100%;
+	}
+
+	/* Podium Screen */
+	.podium-screen {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding-top: 1rem;
+	}
+
+	.podium-screen h1 {
+		margin-bottom: 1.5rem;
+	}
+
+	.podium {
+		display: flex;
+		align-items: flex-end;
+		justify-content: center;
+		gap: 0.5rem;
+		margin-bottom: 2rem;
+		width: 100%;
+		max-width: 350px;
+	}
+
+	.podium-place {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		flex: 1;
+	}
+
+	.podium-place .crown {
+		font-size: 2rem;
+		margin-bottom: 0.25rem;
+	}
+
+	.podium-place .player-avatar {
+		width: 50px;
+		height: 50px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin-bottom: 0.5rem;
+	}
+
+	.podium-place.first .player-avatar {
+		background: #fbbf24;
+		color: black;
+	}
+
+	.podium-place.second .player-avatar {
+		background: #9ca3af;
+		color: black;
+	}
+
+	.podium-place.third .player-avatar {
+		background: #d97706;
+		color: white;
+	}
+
+	.podium-place .player-name {
+		font-weight: 600;
+		font-size: 0.9rem;
+		margin-bottom: 0.25rem;
+		text-align: center;
+	}
+
+	.podium-place .player-score {
+		font-size: 0.85rem;
+		color: #888;
+		margin-bottom: 0.5rem;
+	}
+
+	.podium-block {
+		width: 100%;
+		border-radius: 8px 8px 0 0;
+	}
+
+	.podium-place.first .podium-block {
+		height: 100px;
+		background: linear-gradient(180deg, #fbbf24, #f59e0b);
+	}
+
+	.podium-place.second .podium-block {
+		height: 70px;
+		background: linear-gradient(180deg, #9ca3af, #6b7280);
+	}
+
+	.podium-place.third .podium-block {
+		height: 50px;
+		background: linear-gradient(180deg, #d97706, #b45309);
+	}
+
+	.full-standings {
+		background: #1f2937;
+		border-radius: 12px;
+		padding: 1rem;
+		width: 100%;
+		margin-bottom: 1.5rem;
+	}
+
+	.full-standings h3 {
+		text-align: center;
+		margin-bottom: 1rem;
+		font-size: 1rem;
+	}
+
+	.standings-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	.standings-list li {
+		display: flex;
+		align-items: center;
+		padding: 0.5rem;
+		border-bottom: 1px solid #374151;
+	}
+
+	.standings-list li:last-child {
+		border-bottom: none;
+	}
+
+	.standings-list li.is-me {
+		background: rgba(99, 102, 241, 0.2);
+		border-radius: 4px;
+	}
+
+	.standings-list .position {
+		width: 30px;
+		font-weight: 600;
+	}
+
+	.standings-list .name {
+		flex: 1;
+	}
+
+	.standings-list .score {
+		font-weight: 600;
+	}
+
+	.podium-actions {
+		margin-top: auto;
+		width: 100%;
+	}
+
+	.podium-actions .btn {
+		width: 100%;
+	}
+
+	.result-item .value.eliminated {
+		color: #f59e0b;
+	}
+
 	/* Responsive */
 	@media (max-width: 400px) {
 		.end-round-buttons {
 			flex-direction: column;
+		}
+
+		.podium-place .player-avatar {
+			width: 40px;
+			height: 40px;
+			font-size: 1.2rem;
+		}
+
+		.podium-place .player-name {
+			font-size: 0.8rem;
 		}
 	}
 </style>
