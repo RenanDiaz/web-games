@@ -6,7 +6,7 @@
 	import PartySocket from 'partysocket';
 
 	// Types
-	type Screen = 'home' | 'lobby' | 'playing' | 'leaderboard' | 'podium';
+	type Screen = 'home' | 'lobby' | 'playing' | 'clues' | 'voting' | 'leaderboard' | 'podium';
 
 	interface Player {
 		id: string;
@@ -22,6 +22,13 @@
 		votedForName: string | null;
 	}
 
+	interface PublicClueEntry {
+		playerId: string;
+		playerName: string;
+		clue: string | null;
+		done: boolean;
+	}
+
 	interface RoundResult {
 		roundNumber: number;
 		word: string;
@@ -33,7 +40,7 @@
 	}
 
 	interface PublicGameState {
-		phase: 'lobby' | 'playing' | 'results' | 'leaderboard' | 'podium';
+		phase: 'lobby' | 'playing' | 'clues' | 'voting' | 'results' | 'leaderboard' | 'podium';
 		players: Player[];
 		hostId: string | null;
 		settings: {
@@ -41,6 +48,7 @@
 			category: string;
 			customWords: string[];
 			totalRounds: number;
+			clueMode: 'chat' | 'offline';
 		};
 		match: {
 			currentRound: number;
@@ -53,6 +61,13 @@
 			votes: PublicVoteInfo[];
 			voteCount: number;
 			totalPlayers: number;
+			// Clue turn info
+			turnOrder: { playerId: string; playerName: string }[];
+			currentTurnIndex: number;
+			currentTurnPlayerId: string | null;
+			isMyTurn: boolean;
+			clues: PublicClueEntry[];
+			allCluesDone: boolean;
 		} | null;
 		lastResult: RoundResult | null;
 		myId: string;
@@ -96,6 +111,7 @@
 	let showRole = $state(false);
 	let customWordsInput = $state('');
 	let connectionStatus = $state<'connecting' | 'connected' | 'disconnected'>('disconnected');
+	let clueInput = $state('');
 
 	// Derived helpers
 	function getIsHost(): boolean {
@@ -248,9 +264,16 @@
 				screen = 'lobby';
 				myRole = null;
 				selectedVote = null;
+				clueInput = '';
 				break;
 			case 'playing':
 				screen = 'playing';
+				break;
+			case 'clues':
+				screen = 'clues';
+				break;
+			case 'voting':
+				screen = 'voting';
 				break;
 			case 'results':
 			case 'leaderboard':
@@ -293,6 +316,20 @@
 
 	function nextRound() {
 		socket?.send(JSON.stringify({ type: 'next-round' }));
+	}
+
+	function submitClue() {
+		if (!clueInput.trim()) return;
+		socket?.send(JSON.stringify({ type: 'submit-clue', clue: clueInput.trim() }));
+		clueInput = '';
+	}
+
+	function markClueDone() {
+		socket?.send(JSON.stringify({ type: 'mark-clue-done' }));
+	}
+
+	function startVoting() {
+		socket?.send(JSON.stringify({ type: 'start-voting' }));
 	}
 
 	function backToLobby() {
@@ -567,6 +604,18 @@
 						</select>
 					</div>
 
+					<div class="setting-row">
+						<label for="clueMode">{$_('impostor.lobby.clueMode')}</label>
+						<select
+							id="clueMode"
+							value={gameState?.settings.clueMode}
+							onchange={(e) => updateSettings({ clueMode: e.currentTarget.value as 'chat' | 'offline' })}
+						>
+							<option value="offline">{$_('impostor.lobby.clueModeOffline')}</option>
+							<option value="chat">{$_('impostor.lobby.clueModeChat')}</option>
+						</select>
+					</div>
+
 					<div class="custom-words-section">
 						<label>{$_('impostor.lobby.customWords')}</label>
 						<div class="custom-words-input">
@@ -607,7 +656,7 @@
 			{/if}
 		</div>
 	{:else if screen === 'playing'}
-		<!-- Playing Screen -->
+		<!-- Playing Screen - Role Reveal -->
 		<div class="playing-screen">
 			<!-- Round indicator -->
 			{#if gameState?.match}
@@ -654,7 +703,172 @@
 				</p>
 			</div>
 
-			<!-- Voting section during play -->
+			<!-- Turn order preview -->
+			<div class="clues-section">
+				<h3>{$_('impostor.clues.turnOrder')}</h3>
+				<ol class="turn-order-list">
+					{#each gameState?.currentRound?.turnOrder ?? [] as turn, index}
+						<li class:current={index === 0} class:is-me={turn.playerId === gameState?.myId}>
+							<span class="turn-number">{index + 1}</span>
+							<span class="turn-name">{turn.playerName}</span>
+							{#if turn.playerId === gameState?.myId}
+								<span class="you-badge">{$_('impostor.lobby.you')}</span>
+							{/if}
+							{#if index === 0}
+								<span class="current-badge">{$_('impostor.clues.first')}</span>
+							{/if}
+						</li>
+					{/each}
+				</ol>
+
+				<!-- First player starts giving clues -->
+				{#if gameState?.currentRound?.isMyTurn}
+					<div class="my-turn-indicator">
+						<p>{$_('impostor.clues.youStart')}</p>
+						{#if gameState?.settings.clueMode === 'chat'}
+							<div class="clue-input-section">
+								<input
+									type="text"
+									bind:value={clueInput}
+									placeholder={$_('impostor.clues.writeCluePlaceholder')}
+									maxlength="100"
+									onkeypress={(e) => e.key === 'Enter' && submitClue()}
+								/>
+								<button class="btn primary" onclick={submitClue} disabled={!clueInput.trim()}>
+									{$_('impostor.clues.submitClue')}
+								</button>
+							</div>
+						{:else}
+							<button class="btn primary large" onclick={markClueDone}>
+								{$_('impostor.clues.iGaveMyClue')}
+							</button>
+						{/if}
+					</div>
+				{:else}
+					<div class="waiting-turn">
+						<p>{$_('impostor.clues.waitingForFirst', { values: { name: gameState?.currentRound?.turnOrder[0]?.playerName ?? '' } })}</p>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{:else if screen === 'clues'}
+		<!-- Clues Screen -->
+		<div class="clues-screen">
+			<!-- Round indicator -->
+			{#if gameState?.match}
+				<div class="round-indicator">
+					{$_('impostor.playing.round', { values: { current: gameState.match.currentRound, total: gameState.match.totalRounds } })}
+				</div>
+			{/if}
+
+			<!-- Compact role reminder -->
+			<div class="role-reminder" class:impostor={myRole?.isImpostor}>
+				{#if myRole?.isImpostor}
+					<span class="role-badge impostor">{$_('impostor.playing.youAreImpostor')}</span>
+				{:else}
+					<span class="role-badge citizen">{$_('impostor.playing.youAreCitizen')}</span>
+					<span class="word-reminder">{myRole?.word}</span>
+				{/if}
+			</div>
+
+			<div class="clues-section">
+				<h3>{$_('impostor.clues.title')}</h3>
+				<p class="clues-progress">
+					{$_('impostor.clues.progress', { values: { current: gameState?.currentRound?.clues.filter(c => c.done).length ?? 0, total: gameState?.currentRound?.turnOrder.length ?? 0 } })}
+				</p>
+
+				<!-- Turn order with status -->
+				<ol class="turn-order-list">
+					{#each gameState?.currentRound?.turnOrder ?? [] as turn, index}
+						{@const clueEntry = gameState?.currentRound?.clues.find(c => c.playerId === turn.playerId)}
+						{@const isCurrent = index === gameState?.currentRound?.currentTurnIndex}
+						<li class:done={clueEntry?.done} class:current={isCurrent} class:is-me={turn.playerId === gameState?.myId}>
+							<span class="turn-number">{index + 1}</span>
+							<span class="turn-name">{turn.playerName}</span>
+							{#if turn.playerId === gameState?.myId}
+								<span class="you-badge">{$_('impostor.lobby.you')}</span>
+							{/if}
+							{#if clueEntry?.done}
+								<span class="done-badge">&#10004;</span>
+								{#if clueEntry?.clue && gameState?.settings.clueMode === 'chat'}
+									<span class="clue-text">"{clueEntry.clue}"</span>
+								{/if}
+							{:else if isCurrent}
+								<span class="current-badge">{$_('impostor.clues.currentTurn')}</span>
+							{/if}
+						</li>
+					{/each}
+				</ol>
+
+				<!-- My turn to give clue -->
+				{#if gameState?.currentRound?.isMyTurn}
+					<div class="my-turn-indicator">
+						<p>{$_('impostor.clues.yourTurn')}</p>
+						{#if gameState?.settings.clueMode === 'chat'}
+							<div class="clue-input-section">
+								<input
+									type="text"
+									bind:value={clueInput}
+									placeholder={$_('impostor.clues.writeCluePlaceholder')}
+									maxlength="100"
+									onkeypress={(e) => e.key === 'Enter' && submitClue()}
+								/>
+								<button class="btn primary" onclick={submitClue} disabled={!clueInput.trim()}>
+									{$_('impostor.clues.submitClue')}
+								</button>
+							</div>
+						{:else}
+							<button class="btn primary large" onclick={markClueDone}>
+								{$_('impostor.clues.iGaveMyClue')}
+							</button>
+						{/if}
+					</div>
+				{:else if !gameState?.currentRound?.allCluesDone}
+					<div class="waiting-turn">
+						<p>{$_('impostor.clues.waitingFor', { values: { name: gameState?.currentRound?.turnOrder[gameState?.currentRound?.currentTurnIndex]?.playerName ?? '' } })}</p>
+					</div>
+				{/if}
+
+				<!-- All clues done - ready to vote -->
+				{#if gameState?.currentRound?.allCluesDone}
+					<div class="all-done-message">
+						<p>{$_('impostor.clues.allDone')}</p>
+						{#if isHost}
+							<button class="btn primary large" onclick={startVoting}>
+								{$_('impostor.clues.startVoting')}
+							</button>
+						{:else}
+							<p class="waiting-host">{$_('impostor.clues.waitingForHostVoting')}</p>
+						{/if}
+					</div>
+				{/if}
+			</div>
+		</div>
+	{:else if screen === 'voting'}
+		<!-- Voting Screen -->
+		<div class="voting-screen">
+			<!-- Round indicator -->
+			{#if gameState?.match}
+				<div class="round-indicator">
+					{$_('impostor.playing.round', { values: { current: gameState.match.currentRound, total: gameState.match.totalRounds } })}
+				</div>
+			{/if}
+
+			<!-- Show clues given (in chat mode) -->
+			{#if gameState?.settings.clueMode === 'chat' && (gameState?.currentRound?.clues.length ?? 0) > 0}
+				<div class="clues-recap">
+					<h3>{$_('impostor.voting.cluesGiven')}</h3>
+					<ul class="clues-list">
+						{#each gameState?.currentRound?.clues ?? [] as clue}
+							<li>
+								<span class="clue-author">{clue.playerName}:</span>
+								<span class="clue-content">"{clue.clue}"</span>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
+
 			<div class="voting-section">
 				<h3>{$_('impostor.voting.title')}</h3>
 				<p class="voting-instruction">{$_('impostor.voting.instruction')}</p>
@@ -2032,6 +2246,240 @@
 
 	.result-item .value.eliminated {
 		color: #f59e0b;
+	}
+
+	/* Clues Screen */
+	.clues-screen {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		padding-top: 1rem;
+	}
+
+	.clues-section {
+		background: #1f2937;
+		border-radius: 12px;
+		padding: 1rem;
+		width: 100%;
+		margin-top: 1rem;
+	}
+
+	.clues-section h3 {
+		margin: 0 0 0.5rem 0;
+		font-size: 1.1rem;
+	}
+
+	.clues-progress {
+		color: #888;
+		font-size: 0.9rem;
+		margin-bottom: 1rem;
+	}
+
+	.turn-order-list {
+		list-style: none;
+		padding: 0;
+		margin: 0 0 1rem 0;
+		counter-reset: turn;
+	}
+
+	.turn-order-list li {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.75rem;
+		background: #374151;
+		border-radius: 8px;
+		margin-bottom: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.turn-order-list li.current {
+		background: #4f46e5;
+		animation: pulse-bg 1.5s infinite;
+	}
+
+	@keyframes pulse-bg {
+		0%, 100% { background: #4f46e5; }
+		50% { background: #6366f1; }
+	}
+
+	.turn-order-list li.done {
+		background: #065f46;
+	}
+
+	.turn-order-list li.is-me {
+		border: 2px solid #6366f1;
+	}
+
+	.turn-number {
+		width: 24px;
+		height: 24px;
+		background: #1f2937;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.85rem;
+		font-weight: 600;
+	}
+
+	.turn-name {
+		flex: 1;
+		font-weight: 500;
+	}
+
+	.done-badge {
+		color: #22c55e;
+		font-weight: bold;
+	}
+
+	.current-badge {
+		background: #22c55e;
+		color: black;
+		padding: 0.15rem 0.4rem;
+		border-radius: 4px;
+		font-size: 0.7rem;
+		font-weight: 600;
+	}
+
+	.clue-text {
+		width: 100%;
+		margin-top: 0.5rem;
+		padding-top: 0.5rem;
+		border-top: 1px solid #4b5563;
+		font-style: italic;
+		color: #9ca3af;
+		font-size: 0.9rem;
+	}
+
+	.my-turn-indicator {
+		background: linear-gradient(135deg, #4f46e5, #6366f1);
+		padding: 1rem;
+		border-radius: 8px;
+		text-align: center;
+		margin-top: 1rem;
+	}
+
+	.my-turn-indicator p {
+		font-weight: 600;
+		margin-bottom: 1rem;
+		font-size: 1.1rem;
+	}
+
+	.clue-input-section {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.clue-input-section input {
+		flex: 1;
+	}
+
+	.waiting-turn {
+		text-align: center;
+		padding: 1rem;
+		color: #888;
+	}
+
+	.all-done-message {
+		background: #065f46;
+		padding: 1rem;
+		border-radius: 8px;
+		text-align: center;
+		margin-top: 1rem;
+	}
+
+	.all-done-message p {
+		margin-bottom: 1rem;
+	}
+
+	.waiting-host {
+		color: #9ca3af;
+		font-size: 0.9rem;
+	}
+
+	/* Role reminder */
+	.role-reminder {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.75rem;
+		padding: 0.75rem;
+		background: #1f2937;
+		border-radius: 8px;
+		margin-bottom: 0.5rem;
+	}
+
+	.role-reminder.impostor {
+		background: linear-gradient(135deg, #7f1d1d, #991b1b);
+	}
+
+	.role-badge {
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+		font-size: 0.85rem;
+		font-weight: 600;
+	}
+
+	.role-badge.citizen {
+		background: #065f46;
+		color: #22c55e;
+	}
+
+	.role-badge.impostor {
+		background: #7f1d1d;
+		color: #ef4444;
+	}
+
+	.word-reminder {
+		font-weight: 600;
+		color: #22c55e;
+	}
+
+	/* Voting Screen */
+	.voting-screen {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		padding-top: 1rem;
+	}
+
+	.clues-recap {
+		background: #1f2937;
+		border-radius: 12px;
+		padding: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.clues-recap h3 {
+		font-size: 0.9rem;
+		color: #888;
+		margin-bottom: 0.75rem;
+	}
+
+	.clues-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+
+	.clues-list li {
+		padding: 0.5rem 0;
+		border-bottom: 1px solid #374151;
+	}
+
+	.clues-list li:last-child {
+		border-bottom: none;
+	}
+
+	.clue-author {
+		font-weight: 600;
+		margin-right: 0.5rem;
+	}
+
+	.clue-content {
+		color: #9ca3af;
+		font-style: italic;
 	}
 
 	/* Responsive */

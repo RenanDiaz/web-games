@@ -192,6 +192,9 @@
 			"add": "Add",
 			"clearAll": "Clear all",
 			"customWordsActive": "Custom words will replace the selected category",
+			"clueMode": "Clue Mode",
+			"clueModeOffline": "Verbal (no chat)",
+			"clueModeChat": "Written (chat)",
 			"startGame": "Start Match",
 			"needMorePlayers": "Need 3+ players",
 			"waitingForHost": "Waiting for host to start the match..."
@@ -218,13 +221,31 @@
 			"impostorsWin": "Impostor Wins",
 			"citizensWin": "Citizens Win"
 		},
+		"clues": {
+			"title": "Clues",
+			"turnOrder": "Turn Order",
+			"first": "First",
+			"currentTurn": "Their turn",
+			"yourTurn": "It's your turn to give a clue!",
+			"youStart": "You're first! Give your clue.",
+			"waitingFor": "Waiting for {name} to give their clue...",
+			"waitingForFirst": "Waiting for {name} to give the first clue...",
+			"progress": "{current} of {total} clues given",
+			"writeCluePlaceholder": "Write your clue...",
+			"submitClue": "Submit",
+			"iGaveMyClue": "I gave my clue",
+			"allDone": "Everyone has given their clues!",
+			"startVoting": "Start Voting",
+			"waitingForHostVoting": "Waiting for host to start voting..."
+		},
 		"voting": {
 			"title": "Voting",
 			"instruction": "Who do you think is the impostor? You can change your vote.",
 			"votesCount": "{current} of {total} votes",
 			"tieWarning": "There's a tie! Change your votes to break the tie.",
 			"currentVotes": "Current votes",
-			"notVotedYet": "Not voted"
+			"notVotedYet": "Not voted",
+			"cluesGiven": "Clues given"
 		},
 		"results": {
 			"impostorsWon": "Impostor Won!",
