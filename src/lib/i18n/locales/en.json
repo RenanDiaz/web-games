@@ -216,6 +216,7 @@
 			"youAreImpostor": "You are the Impostor!",
 			"youAreCitizen": "You are a Citizen",
 			"impostorHint": "You don't know the word. Pretend you do!",
+			"impostorCategoryHint": "The category is:",
 			"secretWord": "Secret Word",
 			"playersCount": "{count} players in game",
 			"impostorsCount": "{count} impostor(s)",
@@ -264,7 +265,9 @@
 			"title": "Leaderboard",
 			"roundProgress": "Round {current} of {total} completed",
 			"nextRound": "Next Round",
-			"waitingForHost": "Waiting for host to start the next round..."
+			"seeFinalResults": "See Final Results",
+			"waitingForHost": "Waiting for host to start the next round...",
+			"waitingForHostFinal": "Waiting for host to show final results..."
 		},
 		"podium": {
 			"title": "Match Complete!",

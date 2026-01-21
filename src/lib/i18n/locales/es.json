@@ -216,6 +216,7 @@
 			"youAreImpostor": "¡Eres el Impostor!",
 			"youAreCitizen": "Eres Ciudadano",
 			"impostorHint": "No sabes la palabra. ¡Finge que la conoces!",
+			"impostorCategoryHint": "La categoría es:",
 			"secretWord": "Palabra Secreta",
 			"playersCount": "{count} jugadores en la partida",
 			"impostorsCount": "{count} impostor(es)",
@@ -264,7 +265,9 @@
 			"title": "Clasificación",
 			"roundProgress": "Ronda {current} de {total} completada",
 			"nextRound": "Siguiente Ronda",
-			"waitingForHost": "Esperando a que el anfitrión inicie la siguiente ronda..."
+			"seeFinalResults": "Ver Resultados Finales",
+			"waitingForHost": "Esperando a que el anfitrión inicie la siguiente ronda...",
+			"waitingForHostFinal": "Esperando a que el anfitrión muestre los resultados finales..."
 		},
 		"podium": {
 			"title": "¡Partida Terminada!",
