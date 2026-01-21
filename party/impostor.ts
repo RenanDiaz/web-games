@@ -24,6 +24,12 @@ const WORD_CATEGORIES: Record<string, string[]> = {
   ]
 };
 
+// Scoring constants
+const POINTS_CITIZEN_CORRECT = 10;    // Citizens who voted for an impostor
+const POINTS_CITIZEN_WRONG = 0;       // Citizens who voted for a citizen
+const POINTS_IMPOSTOR_NOT_CAUGHT = 15; // Impostor who wasn't voted out
+const POINTS_IMPOSTOR_CAUGHT = 0;     // Impostor who was caught
+
 interface Player {
   id: string;           // Persistent player ID (stored in client localStorage)
   connectionId: string; // Current PartyKit connection ID
@@ -32,34 +38,58 @@ interface Player {
   isConnected: boolean;
 }
 
+interface PlayerScore {
+  odplayerId: string;
+  name: string;
+  score: number;
+  roundsAsImpostor: number;
+  roundsAsCitizen: number;
+  timesCorrect: number;
+}
+
+interface RoundResult {
+  roundNumber: number;
+  word: string;
+  impostorIds: string[];
+  votes: Record<string, string>;
+  eliminatedId: string | null; // Who was voted out (or null if tie)
+  impostorsWon: boolean;
+  pointsAwarded: Record<string, number>; // playerId -> points earned this round
+}
+
 interface GameState {
-  phase: "lobby" | "playing" | "voting" | "results";
+  phase: "lobby" | "playing" | "results" | "leaderboard" | "podium";
   players: Player[];
   hostId: string | null;
   settings: {
     impostorCount: number;
     category: string;
     customWords: string[];
+    totalRounds: number;
   };
+  // Match state (persists across rounds)
+  match: {
+    currentRound: number;
+    usedWords: string[];
+    scores: Record<string, PlayerScore>; // playerId -> score data
+    roundHistory: RoundResult[];
+  } | null;
+  // Current round state
   currentRound: {
     word: string;
     impostorIds: string[];
     votes: Record<string, string>; // voterId -> votedPlayerId
   } | null;
-  lastResult: {
-    word: string;
-    impostorIds: string[];
-    impostorsWon: boolean;
-    votes: Record<string, string>;
-  } | null;
+  lastResult: RoundResult | null;
 }
 
 type ClientMessage =
   | { type: "join"; name: string; playerId: string }
   | { type: "start-game" }
+  | { type: "start-match" }
   | { type: "vote"; targetId: string }
-  | { type: "end-round"; impostorsWon: boolean }
   | { type: "update-settings"; settings: Partial<GameState["settings"]> }
+  | { type: "next-round" }
   | { type: "back-to-lobby" }
   | { type: "kick-player"; playerId: string };
 
@@ -77,17 +107,33 @@ interface PublicPlayer {
   isConnected: boolean;
 }
 
+interface PublicVoteInfo {
+  odplayerId: string;
+  odplayerName: string;
+  votedForId: string | null;
+  votedForName: string | null;
+}
+
 interface PublicGameState {
   phase: GameState["phase"];
   players: PublicPlayer[];
   hostId: string | null;
   settings: GameState["settings"];
+  // Match info
+  match: {
+    currentRound: number;
+    totalRounds: number;
+    scores: Record<string, { name: string; score: number }>; // For leaderboard
+  } | null;
+  // Current round info
   currentRound: {
     hasVoted: boolean;
+    myVote: string | null;
+    votes: PublicVoteInfo[]; // Real-time vote tracking
     voteCount: number;
     totalPlayers: number;
   } | null;
-  lastResult: GameState["lastResult"];
+  lastResult: RoundResult | null;
   myId: string;
 }
 
@@ -102,8 +148,10 @@ export default class ImpostorServer implements Party.Server {
       settings: {
         impostorCount: 1,
         category: "animals",
-        customWords: []
+        customWords: [],
+        totalRounds: 5
       },
+      match: null,
       currentRound: null,
       lastResult: null
     };
@@ -118,13 +166,49 @@ export default class ImpostorServer implements Party.Server {
       isConnected: p.isConnected
     }));
 
+    // Build public vote info (show who voted for whom in real-time)
+    const publicVotes: PublicVoteInfo[] = this.state.currentRound
+      ? this.state.players
+          .filter(p => p.isConnected)
+          .map(p => {
+            const votedForId = this.state.currentRound?.votes[p.id] ?? null;
+            const votedForPlayer = votedForId
+              ? this.state.players.find(pl => pl.id === votedForId)
+              : null;
+            return {
+              odplayerId: p.id,
+              odplayerName: p.name,
+              votedForId,
+              votedForName: votedForPlayer?.name ?? null
+            };
+          })
+      : [];
+
+    // Build match scores for leaderboard
+    const matchScores: Record<string, { name: string; score: number }> = {};
+    if (this.state.match) {
+      for (const [pid, scoreData] of Object.entries(this.state.match.scores)) {
+        matchScores[pid] = {
+          name: scoreData.name,
+          score: scoreData.score
+        };
+      }
+    }
+
     return {
       phase: this.state.phase,
       players: publicPlayers,
       hostId: this.state.hostId,
       settings: this.state.settings,
+      match: this.state.match ? {
+        currentRound: this.state.match.currentRound,
+        totalRounds: this.state.settings.totalRounds,
+        scores: matchScores
+      } : null,
       currentRound: this.state.currentRound ? {
         hasVoted: !!this.state.currentRound.votes[playerId],
+        myVote: this.state.currentRound.votes[playerId] ?? null,
+        votes: publicVotes,
         voteCount: Object.keys(this.state.currentRound.votes).length,
         totalPlayers: this.state.players.filter(p => p.isConnected).length
       } : null,
@@ -214,13 +298,14 @@ export default class ImpostorServer implements Party.Server {
           this.handleJoin(sender, data.name, data.playerId);
           break;
         case "start-game":
-          this.handleStartGame(sender);
+        case "start-match":
+          this.handleStartMatch(sender);
           break;
         case "vote":
           this.handleVote(sender, data.targetId);
           break;
-        case "end-round":
-          this.handleEndRound(sender, data.impostorsWon);
+        case "next-round":
+          this.handleNextRound(sender);
           break;
         case "update-settings":
           this.handleUpdateSettings(sender, data.settings);
@@ -284,7 +369,7 @@ export default class ImpostorServer implements Party.Server {
     this.broadcastState();
   }
 
-  handleStartGame(conn: Party.Connection) {
+  handleStartMatch(conn: Party.Connection) {
     const playerId = this.getPlayerIdByConnection(conn.id);
     if (!playerId) return;
 
@@ -310,19 +395,74 @@ export default class ImpostorServer implements Party.Server {
       return;
     }
 
-    // Select random word
+    // Initialize match state
+    const initialScores: Record<string, PlayerScore> = {};
+    for (const player of connectedPlayers) {
+      initialScores[player.id] = {
+        odplayerId: player.id,
+        name: player.name,
+        score: 0,
+        roundsAsImpostor: 0,
+        roundsAsCitizen: 0,
+        timesCorrect: 0
+      };
+    }
+
+    this.state.match = {
+      currentRound: 1,
+      usedWords: [],
+      scores: initialScores,
+      roundHistory: []
+    };
+    this.state.lastResult = null;
+
+    // Start the first round
+    this.startRound();
+  }
+
+  startRound() {
+    const connectedPlayers = this.state.players.filter(p => p.isConnected);
+    if (!this.state.match) return;
+
+    // Select random word (excluding used words)
     let wordPool: string[];
     if (this.state.settings.customWords.length > 0) {
-      wordPool = this.state.settings.customWords;
+      wordPool = this.state.settings.customWords.filter(
+        w => !this.state.match!.usedWords.includes(w)
+      );
     } else {
-      wordPool = WORD_CATEGORIES[this.state.settings.category] || WORD_CATEGORIES.animals;
+      const categoryWords = WORD_CATEGORIES[this.state.settings.category] || WORD_CATEGORIES.animals;
+      wordPool = categoryWords.filter(w => !this.state.match!.usedWords.includes(w));
     }
+
+    // If all words have been used, reset the pool (but this shouldn't happen with enough words)
+    if (wordPool.length === 0) {
+      if (this.state.settings.customWords.length > 0) {
+        wordPool = this.state.settings.customWords;
+      } else {
+        wordPool = WORD_CATEGORIES[this.state.settings.category] || WORD_CATEGORIES.animals;
+      }
+      this.state.match.usedWords = [];
+    }
+
     const word = wordPool[Math.floor(Math.random() * wordPool.length)];
+    this.state.match.usedWords.push(word);
 
     // Select random impostors
     const shuffledPlayers = [...connectedPlayers].sort(() => Math.random() - 0.5);
     const impostorCount = Math.min(this.state.settings.impostorCount, Math.floor(connectedPlayers.length / 2));
     const impostorIds = shuffledPlayers.slice(0, impostorCount).map(p => p.id);
+
+    // Update player stats for role
+    for (const player of connectedPlayers) {
+      if (this.state.match.scores[player.id]) {
+        if (impostorIds.includes(player.id)) {
+          this.state.match.scores[player.id].roundsAsImpostor++;
+        } else {
+          this.state.match.scores[player.id].roundsAsCitizen++;
+        }
+      }
+    }
 
     this.state.currentRound = {
       word,
@@ -330,7 +470,6 @@ export default class ImpostorServer implements Party.Server {
       votes: {}
     };
     this.state.phase = "playing";
-    this.state.lastResult = null;
 
     // Send state and roles
     this.broadcastState();
@@ -343,7 +482,7 @@ export default class ImpostorServer implements Party.Server {
     const playerId = this.getPlayerIdByConnection(conn.id);
     if (!playerId) return;
 
-    if (this.state.phase !== "playing" && this.state.phase !== "voting") {
+    if (this.state.phase !== "playing") {
       return;
     }
 
@@ -359,34 +498,137 @@ export default class ImpostorServer implements Party.Server {
       return;
     }
 
-    // Record vote
+    // Record or change vote (players can change their vote at any time)
     this.state.currentRound.votes[playerId] = targetId;
-    this.state.phase = "voting";
+    this.broadcastState();
+
+    // Check if all connected players have voted
+    this.checkRoundEnd();
+  }
+
+  checkRoundEnd() {
+    if (!this.state.currentRound || !this.state.match) return;
+
+    const connectedPlayers = this.state.players.filter(p => p.isConnected);
+    const voteCount = Object.keys(this.state.currentRound.votes).length;
+
+    // Not all players have voted yet
+    if (voteCount < connectedPlayers.length) return;
+
+    // Count votes for each player
+    const voteCounts: Record<string, number> = {};
+    for (const votedId of Object.values(this.state.currentRound.votes)) {
+      voteCounts[votedId] = (voteCounts[votedId] || 0) + 1;
+    }
+
+    // Find the player(s) with most votes
+    const maxVotes = Math.max(...Object.values(voteCounts));
+    const playersWithMaxVotes = Object.entries(voteCounts)
+      .filter(([_, count]) => count === maxVotes)
+      .map(([playerId]) => playerId);
+
+    // If there's a tie, don't end the round - players need to change their votes
+    if (playersWithMaxVotes.length > 1) {
+      // Broadcast state so clients know there's a tie
+      this.broadcastState();
+      return;
+    }
+
+    // We have a clear winner (most voted player)
+    const eliminatedId = playersWithMaxVotes[0];
+    this.endRound(eliminatedId);
+  }
+
+  endRound(eliminatedId: string | null) {
+    if (!this.state.currentRound || !this.state.match) return;
+
+    const impostorIds = this.state.currentRound.impostorIds;
+    const connectedPlayers = this.state.players.filter(p => p.isConnected);
+
+    // Determine if impostors won
+    // Impostors win if the eliminated player is NOT an impostor
+    const impostorsWon = eliminatedId === null || !impostorIds.includes(eliminatedId);
+
+    // Calculate and award points
+    const pointsAwarded: Record<string, number> = {};
+
+    for (const player of connectedPlayers) {
+      const isImpostor = impostorIds.includes(player.id);
+      const votedFor = this.state.currentRound.votes[player.id];
+      let points = 0;
+
+      if (isImpostor) {
+        // Impostors get points if they weren't caught
+        if (impostorsWon) {
+          points = POINTS_IMPOSTOR_NOT_CAUGHT;
+        } else {
+          points = POINTS_IMPOSTOR_CAUGHT;
+        }
+      } else {
+        // Citizens get points if they voted for an impostor
+        if (votedFor && impostorIds.includes(votedFor)) {
+          points = POINTS_CITIZEN_CORRECT;
+          if (this.state.match.scores[player.id]) {
+            this.state.match.scores[player.id].timesCorrect++;
+          }
+        } else {
+          points = POINTS_CITIZEN_WRONG;
+        }
+      }
+
+      pointsAwarded[player.id] = points;
+      if (this.state.match.scores[player.id]) {
+        this.state.match.scores[player.id].score += points;
+      }
+    }
+
+    // Save round result
+    const roundResult: RoundResult = {
+      roundNumber: this.state.match.currentRound,
+      word: this.state.currentRound.word,
+      impostorIds: this.state.currentRound.impostorIds,
+      votes: { ...this.state.currentRound.votes },
+      eliminatedId,
+      impostorsWon,
+      pointsAwarded
+    };
+
+    this.state.match.roundHistory.push(roundResult);
+    this.state.lastResult = roundResult;
+    this.state.currentRound = null;
+
+    // Determine next phase
+    if (this.state.match.currentRound >= this.state.settings.totalRounds) {
+      // Match is over - show podium
+      this.state.phase = "podium";
+    } else {
+      // Show leaderboard before next round
+      this.state.phase = "leaderboard";
+    }
+
     this.broadcastState();
   }
 
-  handleEndRound(conn: Party.Connection, impostorsWon: boolean) {
+  handleNextRound(conn: Party.Connection) {
     const playerId = this.getPlayerIdByConnection(conn.id);
     if (!playerId) return;
 
-    // Only host can end round
+    // Only host can advance to next round
     if (this.state.hostId !== playerId) {
       return;
     }
 
-    if (!this.state.currentRound) return;
+    if (this.state.phase !== "leaderboard" && this.state.phase !== "results") {
+      return;
+    }
 
-    // Save result
-    this.state.lastResult = {
-      word: this.state.currentRound.word,
-      impostorIds: this.state.currentRound.impostorIds,
-      impostorsWon,
-      votes: this.state.currentRound.votes
-    };
+    if (!this.state.match) return;
 
-    this.state.phase = "results";
-    this.state.currentRound = null;
-    this.broadcastState();
+    // Increment round counter
+    this.state.match.currentRound++;
+
+    // Start the next round
+    this.startRound();
   }
 
   handleUpdateSettings(conn: Party.Connection, settings: Partial<GameState["settings"]>) {
@@ -420,6 +662,8 @@ export default class ImpostorServer implements Party.Server {
 
     this.state.phase = "lobby";
     this.state.currentRound = null;
+    this.state.match = null;
+    this.state.lastResult = null;
     this.broadcastState();
   }
 
