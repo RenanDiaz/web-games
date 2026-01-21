@@ -170,7 +170,9 @@
 			"createRoom": "Create Room",
 			"or": "or",
 			"roomCodePlaceholder": "ABCD",
-			"joinRoom": "Join"
+			"joinRoom": "Join",
+			"joiningRoom": "Joining room",
+			"createInstead": "Create a new room instead"
 		},
 		"lobby": {
 			"title": "Waiting Room",
