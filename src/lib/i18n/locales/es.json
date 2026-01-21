@@ -192,6 +192,9 @@
 			"add": "Agregar",
 			"clearAll": "Limpiar todo",
 			"customWordsActive": "Las palabras personalizadas reemplazarán la categoría seleccionada",
+			"clueMode": "Modo de Pistas",
+			"clueModeOffline": "Verbal (sin chat)",
+			"clueModeChat": "Escrito (chat)",
 			"startGame": "Iniciar Partida",
 			"needMorePlayers": "Se necesitan 3+ jugadores",
 			"waitingForHost": "Esperando a que el anfitrión inicie la partida..."
@@ -218,13 +221,31 @@
 			"impostorsWin": "Gana el Impostor",
 			"citizensWin": "Ganan los Ciudadanos"
 		},
+		"clues": {
+			"title": "Pistas",
+			"turnOrder": "Orden de Turnos",
+			"first": "Primero",
+			"currentTurn": "Su turno",
+			"yourTurn": "¡Es tu turno de dar una pista!",
+			"youStart": "¡Eres el primero! Da tu pista.",
+			"waitingFor": "Esperando a que {name} dé su pista...",
+			"waitingForFirst": "Esperando a que {name} dé la primera pista...",
+			"progress": "{current} de {total} pistas dadas",
+			"writeCluePlaceholder": "Escribe tu pista...",
+			"submitClue": "Enviar",
+			"iGaveMyClue": "Ya di mi pista",
+			"allDone": "¡Todos han dado sus pistas!",
+			"startVoting": "Iniciar Votación",
+			"waitingForHostVoting": "Esperando a que el anfitrión inicie la votación..."
+		},
 		"voting": {
 			"title": "Votación",
 			"instruction": "¿Quién crees que es el impostor? Puedes cambiar tu voto.",
 			"votesCount": "{current} de {total} votos",
 			"tieWarning": "¡Hay un empate! Cambien sus votos para desempatar.",
 			"currentVotes": "Votos actuales",
-			"notVotedYet": "Sin votar"
+			"notVotedYet": "Sin votar",
+			"cluesGiven": "Pistas dadas"
 		},
 		"results": {
 			"impostorsWon": "¡Ganó el Impostor!",

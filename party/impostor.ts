@@ -57,8 +57,15 @@ interface RoundResult {
   pointsAwarded: Record<string, number>; // playerId -> points earned this round
 }
 
+interface ClueEntry {
+  playerId: string;
+  playerName: string;
+  clue: string | null; // null means they marked "done" in offline mode without writing
+  timestamp: number;
+}
+
 interface GameState {
-  phase: "lobby" | "playing" | "results" | "leaderboard" | "podium";
+  phase: "lobby" | "playing" | "clues" | "voting" | "results" | "leaderboard" | "podium";
   players: Player[];
   hostId: string | null;
   settings: {
@@ -66,6 +73,7 @@ interface GameState {
     category: string;
     customWords: string[];
     totalRounds: number;
+    clueMode: "chat" | "offline"; // chat = write clues in app, offline = verbal clues
   };
   // Match state (persists across rounds)
   match: {
@@ -79,6 +87,10 @@ interface GameState {
     word: string;
     impostorIds: string[];
     votes: Record<string, string>; // voterId -> votedPlayerId
+    // Clue turn state
+    turnOrder: string[]; // Player IDs in order they give clues
+    currentTurnIndex: number; // Index of current player's turn
+    clues: ClueEntry[]; // Clues given so far
   } | null;
   lastResult: RoundResult | null;
 }
@@ -91,7 +103,10 @@ type ClientMessage =
   | { type: "update-settings"; settings: Partial<GameState["settings"]> }
   | { type: "next-round" }
   | { type: "back-to-lobby" }
-  | { type: "kick-player"; playerId: string };
+  | { type: "kick-player"; playerId: string }
+  | { type: "submit-clue"; clue: string } // For chat mode
+  | { type: "mark-clue-done" } // For offline mode
+  | { type: "start-voting" }; // Host advances from clues to voting
 
 type ServerMessage =
   | { type: "state"; state: PublicGameState }
@@ -114,6 +129,13 @@ interface PublicVoteInfo {
   votedForName: string | null;
 }
 
+interface PublicClueEntry {
+  playerId: string;
+  playerName: string;
+  clue: string | null;
+  done: boolean;
+}
+
 interface PublicGameState {
   phase: GameState["phase"];
   players: PublicPlayer[];
@@ -132,6 +154,13 @@ interface PublicGameState {
     votes: PublicVoteInfo[]; // Real-time vote tracking
     voteCount: number;
     totalPlayers: number;
+    // Clue turn info
+    turnOrder: { playerId: string; playerName: string }[]; // Order of clue turns
+    currentTurnIndex: number;
+    currentTurnPlayerId: string | null;
+    isMyTurn: boolean;
+    clues: PublicClueEntry[];
+    allCluesDone: boolean;
   } | null;
   lastResult: RoundResult | null;
   myId: string;
@@ -149,7 +178,8 @@ export default class ImpostorServer implements Party.Server {
         impostorCount: 1,
         category: "animals",
         customWords: [],
-        totalRounds: 5
+        totalRounds: 5,
+        clueMode: "offline"
       },
       match: null,
       currentRound: null,
@@ -195,6 +225,36 @@ export default class ImpostorServer implements Party.Server {
       }
     }
 
+    // Build turn order with names
+    const turnOrder = this.state.currentRound
+      ? this.state.currentRound.turnOrder.map(pid => {
+          const player = this.state.players.find(p => p.id === pid);
+          return { playerId: pid, playerName: player?.name ?? pid };
+        })
+      : [];
+
+    // Build public clues info
+    const publicClues: PublicClueEntry[] = this.state.currentRound
+      ? this.state.currentRound.turnOrder.map(pid => {
+          const player = this.state.players.find(p => p.id === pid);
+          const clueEntry = this.state.currentRound?.clues.find(c => c.playerId === pid);
+          return {
+            playerId: pid,
+            playerName: player?.name ?? pid,
+            clue: clueEntry?.clue ?? null,
+            done: !!clueEntry
+          };
+        })
+      : [];
+
+    const currentTurnPlayerId = this.state.currentRound && this.state.currentRound.currentTurnIndex < this.state.currentRound.turnOrder.length
+      ? this.state.currentRound.turnOrder[this.state.currentRound.currentTurnIndex]
+      : null;
+
+    const allCluesDone = this.state.currentRound
+      ? this.state.currentRound.clues.length >= this.state.currentRound.turnOrder.length
+      : false;
+
     return {
       phase: this.state.phase,
       players: publicPlayers,
@@ -210,7 +270,14 @@ export default class ImpostorServer implements Party.Server {
         myVote: this.state.currentRound.votes[playerId] ?? null,
         votes: publicVotes,
         voteCount: Object.keys(this.state.currentRound.votes).length,
-        totalPlayers: this.state.players.filter(p => p.isConnected).length
+        totalPlayers: this.state.players.filter(p => p.isConnected).length,
+        // Clue turn info
+        turnOrder,
+        currentTurnIndex: this.state.currentRound.currentTurnIndex,
+        currentTurnPlayerId,
+        isMyTurn: currentTurnPlayerId === playerId,
+        clues: publicClues,
+        allCluesDone
       } : null,
       lastResult: this.state.lastResult,
       myId: playerId
@@ -264,7 +331,7 @@ export default class ImpostorServer implements Party.Server {
       this.broadcastState();
 
       // If game is in progress, send their role
-      if (this.state.phase === "playing" || this.state.phase === "voting") {
+      if (this.state.phase === "playing" || this.state.phase === "clues" || this.state.phase === "voting") {
         this.sendRole(existingPlayer.id);
       }
     }
@@ -316,6 +383,15 @@ export default class ImpostorServer implements Party.Server {
         case "kick-player":
           this.handleKickPlayer(sender, data.playerId);
           break;
+        case "submit-clue":
+          this.handleSubmitClue(sender, data.clue);
+          break;
+        case "mark-clue-done":
+          this.handleMarkClueDone(sender);
+          break;
+        case "start-voting":
+          this.handleStartVoting(sender);
+          break;
       }
     } catch (e) {
       console.error("Error processing message:", e);
@@ -334,7 +410,7 @@ export default class ImpostorServer implements Party.Server {
       this.broadcastState();
 
       // If game is in progress, send their role
-      if (this.state.phase === "playing" || this.state.phase === "voting") {
+      if (this.state.phase === "playing" || this.state.phase === "clues" || this.state.phase === "voting") {
         this.sendRole(existingPlayer.id);
       }
       return;
@@ -453,6 +529,12 @@ export default class ImpostorServer implements Party.Server {
     const impostorCount = Math.min(this.state.settings.impostorCount, Math.floor(connectedPlayers.length / 2));
     const impostorIds = shuffledPlayers.slice(0, impostorCount).map(p => p.id);
 
+    // Create random turn order for giving clues
+    // Shuffle all connected players for the turn order
+    const turnOrder = [...connectedPlayers]
+      .sort(() => Math.random() - 0.5)
+      .map(p => p.id);
+
     // Update player stats for role
     for (const player of connectedPlayers) {
       if (this.state.match.scores[player.id]) {
@@ -467,7 +549,10 @@ export default class ImpostorServer implements Party.Server {
     this.state.currentRound = {
       word,
       impostorIds,
-      votes: {}
+      votes: {},
+      turnOrder,
+      currentTurnIndex: 0,
+      clues: []
     };
     this.state.phase = "playing";
 
@@ -482,7 +567,7 @@ export default class ImpostorServer implements Party.Server {
     const playerId = this.getPlayerIdByConnection(conn.id);
     if (!playerId) return;
 
-    if (this.state.phase !== "playing") {
+    if (this.state.phase !== "voting") {
       return;
     }
 
@@ -695,5 +780,131 @@ export default class ImpostorServer implements Party.Server {
       this.state.players.splice(playerIndex, 1);
       this.broadcastState();
     }
+  }
+
+  handleSubmitClue(conn: Party.Connection, clue: string) {
+    const playerId = this.getPlayerIdByConnection(conn.id);
+    if (!playerId) return;
+
+    // Must be in playing or clues phase
+    if (this.state.phase !== "playing" && this.state.phase !== "clues") {
+      return;
+    }
+
+    if (!this.state.currentRound) return;
+
+    // Check if it's this player's turn
+    const currentTurnPlayerId = this.state.currentRound.turnOrder[this.state.currentRound.currentTurnIndex];
+    if (currentTurnPlayerId !== playerId) {
+      const errorMessage: ServerMessage = {
+        type: "error",
+        message: "It's not your turn"
+      };
+      conn.send(JSON.stringify(errorMessage));
+      return;
+    }
+
+    // Check if player already gave a clue
+    if (this.state.currentRound.clues.some(c => c.playerId === playerId)) {
+      return;
+    }
+
+    const player = this.state.players.find(p => p.id === playerId);
+
+    // Add the clue
+    this.state.currentRound.clues.push({
+      playerId,
+      playerName: player?.name ?? playerId,
+      clue: clue.trim(),
+      timestamp: Date.now()
+    });
+
+    // Move to next turn
+    this.state.currentRound.currentTurnIndex++;
+
+    // If we're still in playing phase and someone gave a clue, move to clues phase
+    if (this.state.phase === "playing") {
+      this.state.phase = "clues";
+    }
+
+    // Check if all players have given clues - auto advance to voting
+    if (this.state.currentRound.clues.length >= this.state.currentRound.turnOrder.length) {
+      this.state.phase = "voting";
+    }
+
+    this.broadcastState();
+  }
+
+  handleMarkClueDone(conn: Party.Connection) {
+    const playerId = this.getPlayerIdByConnection(conn.id);
+    if (!playerId) return;
+
+    // Must be in playing or clues phase
+    if (this.state.phase !== "playing" && this.state.phase !== "clues") {
+      return;
+    }
+
+    if (!this.state.currentRound) return;
+
+    // Check if it's this player's turn
+    const currentTurnPlayerId = this.state.currentRound.turnOrder[this.state.currentRound.currentTurnIndex];
+    if (currentTurnPlayerId !== playerId) {
+      const errorMessage: ServerMessage = {
+        type: "error",
+        message: "It's not your turn"
+      };
+      conn.send(JSON.stringify(errorMessage));
+      return;
+    }
+
+    // Check if player already gave a clue
+    if (this.state.currentRound.clues.some(c => c.playerId === playerId)) {
+      return;
+    }
+
+    const player = this.state.players.find(p => p.id === playerId);
+
+    // Mark as done (no written clue in offline mode)
+    this.state.currentRound.clues.push({
+      playerId,
+      playerName: player?.name ?? playerId,
+      clue: null,
+      timestamp: Date.now()
+    });
+
+    // Move to next turn
+    this.state.currentRound.currentTurnIndex++;
+
+    // If we're still in playing phase and someone marked done, move to clues phase
+    if (this.state.phase === "playing") {
+      this.state.phase = "clues";
+    }
+
+    // Check if all players have given clues - auto advance to voting
+    if (this.state.currentRound.clues.length >= this.state.currentRound.turnOrder.length) {
+      this.state.phase = "voting";
+    }
+
+    this.broadcastState();
+  }
+
+  handleStartVoting(conn: Party.Connection) {
+    const playerId = this.getPlayerIdByConnection(conn.id);
+    if (!playerId) return;
+
+    // Only host can start voting
+    if (this.state.hostId !== playerId) {
+      return;
+    }
+
+    // Must be in clues phase
+    if (this.state.phase !== "clues" && this.state.phase !== "playing") {
+      return;
+    }
+
+    if (!this.state.currentRound) return;
+
+    this.state.phase = "voting";
+    this.broadcastState();
   }
 }
