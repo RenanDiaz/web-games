@@ -110,7 +110,7 @@ type ClientMessage =
 
 type ServerMessage =
   | { type: "state"; state: PublicGameState }
-  | { type: "role"; isImpostor: boolean; word: string | null }
+  | { type: "role"; isImpostor: boolean; word: string | null; category: string }
   | { type: "error"; message: string }
   | { type: "kicked" };
 
@@ -316,7 +316,8 @@ export default class ImpostorServer implements Party.Server {
     const message: ServerMessage = {
       type: "role",
       isImpostor,
-      word: isImpostor ? null : this.state.currentRound.word
+      word: isImpostor ? null : this.state.currentRound.word,
+      category: this.state.settings.category
     };
     conn.send(JSON.stringify(message));
   }
@@ -529,11 +530,30 @@ export default class ImpostorServer implements Party.Server {
     const impostorCount = Math.min(this.state.settings.impostorCount, Math.floor(connectedPlayers.length / 2));
     const impostorIds = shuffledPlayers.slice(0, impostorCount).map(p => p.id);
 
-    // Create random turn order for giving clues
-    // Shuffle all connected players for the turn order
-    const turnOrder = [...connectedPlayers]
-      .sort(() => Math.random() - 0.5)
-      .map(p => p.id);
+    // Create turn order for giving clues
+    // Impostors should rarely (but not never) go first - approximately 15% chance
+    // This makes it harder for impostors (less context) but doesn't make it obvious they're not first
+    const IMPOSTOR_FIRST_PROBABILITY = 0.15;
+
+    const citizens = connectedPlayers.filter(p => !impostorIds.includes(p.id));
+    const impostors = connectedPlayers.filter(p => impostorIds.includes(p.id));
+
+    let turnOrder: string[];
+
+    if (Math.random() < IMPOSTOR_FIRST_PROBABILITY || citizens.length === 0) {
+      // Impostor goes first - just shuffle everyone randomly
+      turnOrder = [...connectedPlayers]
+        .sort(() => Math.random() - 0.5)
+        .map(p => p.id);
+    } else {
+      // Citizen goes first - pick a random citizen for first position
+      // Then shuffle the rest (including impostors) randomly for positions 2+
+      const shuffledCitizens = [...citizens].sort(() => Math.random() - 0.5);
+      const firstPlayer = shuffledCitizens[0];
+      const remainingPlayers = [...connectedPlayers.filter(p => p.id !== firstPlayer.id)]
+        .sort(() => Math.random() - 0.5);
+      turnOrder = [firstPlayer.id, ...remainingPlayers.map(p => p.id)];
+    }
 
     // Update player stats for role
     for (const player of connectedPlayers) {
@@ -682,14 +702,9 @@ export default class ImpostorServer implements Party.Server {
     this.state.lastResult = roundResult;
     this.state.currentRound = null;
 
-    // Determine next phase
-    if (this.state.match.currentRound >= this.state.settings.totalRounds) {
-      // Match is over - show podium
-      this.state.phase = "podium";
-    } else {
-      // Show leaderboard before next round
-      this.state.phase = "leaderboard";
-    }
+    // Always show leaderboard first (with results), even on last round
+    // The transition to podium happens in handleNextRound when it's the final round
+    this.state.phase = "leaderboard";
 
     this.broadcastState();
   }
@@ -708,6 +723,13 @@ export default class ImpostorServer implements Party.Server {
     }
 
     if (!this.state.match) return;
+
+    // Check if this was the last round - if so, go to podium
+    if (this.state.match.currentRound >= this.state.settings.totalRounds) {
+      this.state.phase = "podium";
+      this.broadcastState();
+      return;
+    }
 
     // Increment round counter
     this.state.match.currentRound++;

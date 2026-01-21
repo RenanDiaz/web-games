@@ -75,7 +75,7 @@
 
 	type ServerMessage =
 		| { type: 'state'; state: PublicGameState }
-		| { type: 'role'; isImpostor: boolean; word: string | null }
+		| { type: 'role'; isImpostor: boolean; word: string | null; category: string }
 		| { type: 'error'; message: string }
 		| { type: 'kicked' };
 
@@ -106,7 +106,7 @@
 	let errorMessage = $state('');
 	let socket: PartySocket | null = $state(null);
 	let gameState: PublicGameState | null = $state(null);
-	let myRole: { isImpostor: boolean; word: string | null } | null = $state(null);
+	let myRole: { isImpostor: boolean; word: string | null; category: string } | null = $state(null);
 	let selectedVote: string | null = $state(null);
 	let showRole = $state(false);
 	let customWordsInput = $state('');
@@ -247,7 +247,7 @@
 				updateScreen(message.state.phase);
 				break;
 			case 'role':
-				myRole = { isImpostor: message.isImpostor, word: message.word };
+				myRole = { isImpostor: message.isImpostor, word: message.word, category: message.category };
 				showRole = false;
 				break;
 			case 'error':
@@ -717,6 +717,10 @@
 							<div class="role-icon impostor-icon">?</div>
 							<h2>{$_('impostor.playing.youAreImpostor')}</h2>
 							<p class="role-hint">{$_('impostor.playing.impostorHint')}</p>
+							<div class="category-hint">
+								<span class="label">{$_('impostor.playing.impostorCategoryHint')}</span>
+								<span class="category">{$_(`impostor.categories.${myRole.category}`)}</span>
+							</div>
 						{:else}
 							<div class="role-icon citizen-icon">&#10004;</div>
 							<h2>{$_('impostor.playing.youAreCitizen')}</h2>
@@ -1051,11 +1055,17 @@
 			{#if isHost}
 				<div class="leaderboard-actions">
 					<button class="btn primary large" onclick={nextRound}>
-						{$_('impostor.leaderboard.nextRound')}
+						{gameState?.match && gameState.match.currentRound >= gameState.match.totalRounds
+							? $_('impostor.leaderboard.seeFinalResults')
+							: $_('impostor.leaderboard.nextRound')}
 					</button>
 				</div>
 			{:else}
-				<p class="waiting-message">{$_('impostor.leaderboard.waitingForHost')}</p>
+				<p class="waiting-message">
+					{gameState?.match && gameState.match.currentRound >= gameState.match.totalRounds
+						? $_('impostor.leaderboard.waitingForHostFinal')
+						: $_('impostor.leaderboard.waitingForHost')}
+				</p>
 			{/if}
 		</div>
 	{:else if screen === 'podium'}
@@ -1642,6 +1652,28 @@
 	.role-hint {
 		color: #fca5a5;
 		font-size: 0.9rem;
+	}
+
+	.category-hint {
+		background: #374151;
+		padding: 1rem;
+		border-radius: 8px;
+		width: 100%;
+		margin-top: 0.5rem;
+	}
+
+	.category-hint .label {
+		display: block;
+		font-size: 0.8rem;
+		color: #888;
+		margin-bottom: 0.25rem;
+	}
+
+	.category-hint .category {
+		display: block;
+		font-size: 1.3rem;
+		font-weight: 700;
+		color: #f59e0b;
 	}
 
 	.secret-word {
