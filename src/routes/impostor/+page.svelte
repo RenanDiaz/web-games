@@ -1071,6 +1071,41 @@
 	{:else if screen === 'podium'}
 		<!-- Podium Screen (end of match) -->
 		<div class="podium-screen">
+			{#if gameState?.lastResult}
+				<div class="round-result-header podium-last-round">
+					<h2>
+						{#if gameState.lastResult.impostorsWon}
+							{$_('impostor.results.impostorsWon')}
+						{:else}
+							{$_('impostor.results.citizensWon')}
+						{/if}
+					</h2>
+
+					<div class="result-details">
+						<div class="result-item">
+							<span class="label">{$_('impostor.results.secretWord')}</span>
+							<span class="value">{gameState.lastResult.word}</span>
+						</div>
+
+						<div class="result-item">
+							<span class="label">{$_('impostor.results.impostorsWere')}</span>
+							<span class="value impostors">
+								{gameState.lastResult.impostorIds.map(getPlayerName).join(', ')}
+							</span>
+						</div>
+
+						{#if gameState.lastResult.eliminatedId}
+							<div class="result-item">
+								<span class="label">{$_('impostor.results.eliminated')}</span>
+								<span class="value eliminated">
+									{getPlayerName(gameState.lastResult.eliminatedId)}
+								</span>
+							</div>
+						{/if}
+					</div>
+				</div>
+			{/if}
+
 			<h1>{$_('impostor.podium.title')}</h1>
 
 			<!-- Podium display -->
@@ -2207,6 +2242,15 @@
 
 	.podium-screen h1 {
 		margin-bottom: 1.5rem;
+	}
+
+	.podium-last-round {
+		margin-bottom: 1rem;
+	}
+
+	.podium-last-round h2 {
+		font-size: 1.3rem;
+		margin-bottom: 0.75rem;
 	}
 
 	.podium {
