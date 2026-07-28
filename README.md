@@ -42,7 +42,11 @@ This project uses SvelteKit with the static adapter, making it easy to deploy to
 
 - **Vercel**: Connect your repo and it will auto-detect SvelteKit
 - **Netlify**: Same as Vercel, auto-detection works
+- **Cloudflare Pages**: Connect your repo — `wrangler.jsonc` sets the output directory (`build`). Build command: `npm run build`
 - **GitHub Pages**: Run `npm run build` and deploy the `build` folder
+
+Remember to set `PUBLIC_PARTYKIT_HOST` as a build-time environment variable on
+whichever host you use, otherwise the build will fail.
 
 ## Tech Stack
 
