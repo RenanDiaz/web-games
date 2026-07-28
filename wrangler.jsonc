@@ -1,0 +1,11 @@
+{
+	"$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+	"name": "web-games",
+	"compatibility_date": "2025-01-01",
+	"assets": {
+		// Carpeta que genera `npm run build` (adapter-static: pages/assets = "build")
+		"directory": "./build",
+		// El adapter usa index.html como fallback SPA para las rutas no prerenderizadas
+		"not_found_handling": "single-page-application"
+	}
+}
